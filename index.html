@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>SecureChat — E2E Encrypted P2P</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,6 +15,8 @@
     color: #eef3fc;
     display: flex; align-items: center; justify-content: center;
     padding: 12px; overflow: hidden;
+    /* Prevent iOS bounce */
+    overscroll-behavior: none;
   }
   .app {
     width: 100%; max-width: 1050px; height: 94vh; max-height: 780px;
@@ -24,6 +26,8 @@
     border: 1px solid rgba(255,255,255,0.06);
     box-shadow: 0 30px 70px -20px rgba(0,0,0,0.7);
     display: flex; flex-direction: column; overflow: hidden; position: relative;
+    /* Use dvh for mobile keyboard */
+    height: 94dvh;
   }
 
   /* ============ CONNECT SCREEN ============ */
@@ -124,7 +128,7 @@
     font-size: 0.95rem; transition: all .15s;
   }
   .header-btn:hover { background: #222d45; color: white; border-color: #3b4866; }
-  .header-btn.active { background: #2a4bff; color: white; border-color: #2a4bff; box-shadow: 0 0 14px #2a4bff80; }
+  .header-btn:disabled { opacity: .35; cursor: not-allowed; }
 
   /* ============ CALL OVERLAY ============ */
   .call-overlay {
@@ -162,7 +166,6 @@
     min-height: 0;
   }
 
-  /* Remote video (main) */
   .remote-video-wrap {
     width: 100%; height: 100%; max-width: 900px; max-height: 100%;
     border-radius: 22px; overflow: hidden; position: relative;
@@ -194,7 +197,6 @@
   }
   .remote-placeholder .sub i { color: #f5a623; }
 
-  /* Local video (picture-in-picture) */
   .local-video-wrap {
     position: absolute; bottom: 22px; right: 22px;
     width: 180px; height: 135px; border-radius: 16px;
@@ -215,11 +217,12 @@
     border-radius: 100px; letter-spacing: 0.04em;
   }
 
-  /* ============ CALL CONTROLS ============ */
   .call-controls {
     padding: 18px 22px 24px; display: flex;
     align-items: center; justify-content: center;
     gap: 14px; flex-shrink: 0;
+    /* iOS safe area */
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
   .call-ctrl {
     width: 58px; height: 58px; border-radius: 50%; border: none;
@@ -247,7 +250,6 @@
   }
   .call-ctrl.accept:hover { transform: translateY(-2px) scale(1.04); }
 
-  /* ============ INCOMING CALL MODAL ============ */
   .incoming-call {
     position: absolute; inset: 0; z-index: 60;
     background: rgba(8, 11, 20, 0.85);
@@ -286,6 +288,11 @@
     flex: 1; overflow-y: auto; padding: 22px 20px;
     display: flex; flex-direction: column; gap: 10px;
     background: radial-gradient(circle at 30% 20%, #131c2e 0%, #0a0f1a 90%);
+    /* Smooth scrolling + momentum on mobile */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* prevent scroll anchoring issues */
+    overflow-anchor: none;
   }
   .messages::-webkit-scrollbar { width: 6px; }
   .messages::-webkit-scrollbar-thumb { background: #2b3852; border-radius: 20px; }
@@ -309,7 +316,6 @@
     border: 1px solid #1e283c; max-width: 90%; text-align: center;
   }
 
-  /* Typing indicator */
   .typing-bubble {
     display: flex; align-items: center; gap: 4px;
     padding: 12px 18px;
@@ -331,7 +337,6 @@
     30% { transform: translateY(-5px); opacity: 1; background: #5b8cff; }
   }
 
-  /* Decryption animation */
   .decrypt-bubble {
     padding: 12px 16px;
     background: #1a2135;
@@ -367,31 +372,16 @@
     text-align: center;
     transition: color .12s;
   }
-  .decrypt-bubble .char.scrambled {
-    color: #4a6aff;
-    opacity: 0.85;
-    text-shadow: 0 0 6px rgba(91,140,255,0.6);
-  }
-  .decrypt-bubble .char.revealed {
-    color: #eef3fc;
-    text-shadow: 0 0 4px rgba(46,204,113,0.4);
-    animation: revealPop .25s ease-out;
-  }
-  .decrypt-bubble .char.locked {
-    color: #7b3aff;
-    opacity: 0.5;
-  }
+  .decrypt-bubble .char.scrambled { color: #4a6aff; opacity: 0.85; text-shadow: 0 0 6px rgba(91,140,255,0.6); }
+  .decrypt-bubble .char.revealed { color: #eef3fc; text-shadow: 0 0 4px rgba(46,204,113,0.4); animation: revealPop .25s ease-out; }
+  .decrypt-bubble .char.locked { color: #7b3aff; opacity: 0.5; }
   @keyframes revealPop {
     0% { transform: scale(1.4); color: #2ecc71; text-shadow: 0 0 12px #2ecc71; }
     100% { transform: scale(1); color: #eef3fc; text-shadow: 0 0 4px rgba(46,204,113,0.4); }
   }
   .decrypt-cursor {
-    display: inline-block;
-    width: 2px;
-    height: 1em;
-    background: #2ecc71;
-    margin-left: 2px;
-    vertical-align: middle;
+    display: inline-block; width: 2px; height: 1em; background: #2ecc71;
+    margin-left: 2px; vertical-align: middle;
     animation: blink .5s steps(1) infinite;
     box-shadow: 0 0 6px #2ecc71;
   }
@@ -402,6 +392,8 @@
     padding: 12px 16px 16px; background: #101726;
     border-top: 1px solid rgba(255,255,255,0.05);
     display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0;
+    /* iOS safe area */
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
   .input-wrap {
     flex: 1; background: #0a101c; border: 1px solid #26314a;
@@ -412,8 +404,10 @@
   .input-wrap input {
     flex: 1; background: transparent; border: none; outline: none;
     color: #eef3fc; font-size: 0.92rem; padding: 10px 0; font-family: inherit;
+    /* prevent zoom on iOS: font-size must be >= 16px on focus */
+    font-size: 16px;
   }
-  .input-wrap input::placeholder { color: #4d5b78; }
+  .input-wrap input::placeholder { color: #4d5b78; font-size: 0.92rem; }
   .send-btn {
     width: 44px; height: 44px; border-radius: 50%; border: none; flex-shrink: 0;
     background: linear-gradient(135deg,#2a4bff,#1f3ee6); color: white; cursor: pointer;
@@ -429,15 +423,28 @@
   }
   .enc-footer i { color: #2ecc71; }
 
+  /* ============ RESPONSIVE / MOBILE ============ */
   @media (max-width: 600px) {
     body { padding: 0; }
-    .app { height: 100vh; max-height: none; border-radius: 0; border: none; }
+    .app {
+      height: 100dvh; max-height: none; border-radius: 0; border: none;
+      /* use dynamic viewport height so keyboard doesn't cut content */
+      height: 100dvh;
+    }
     .messages { padding: 16px 14px; }
     .msg { max-width: 88%; }
     .badge span { display: none; }
     .local-video-wrap { width: 120px; height: 90px; bottom: 14px; right: 14px; }
     .call-ctrl { width: 50px; height: 50px; font-size: 1rem; }
     .call-ctrl.end { width: 56px; height: 56px; }
+    .header-btn { width: 36px; height: 36px; font-size: 0.85rem; }
+    .chat-header { padding: 12px 14px; }
+    .input-bar { padding: 10px 12px 14px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+  }
+
+  /* When the on-screen keyboard is open, shrink the app height */
+  .app.keyboard-open {
+    /* handled via JS setting inline height */
   }
 </style>
 </head>
@@ -460,7 +467,7 @@
         </p>
         <div class="field">
           <label>Your display name</label>
-          <input class="code-box" id="myNameInput" style="font-family:Inter,sans-serif;font-size:0.9rem;padding:12px 14px;resize:none;height:auto" placeholder="e.g. Alex" maxlength="24" />
+          <input class="code-box" id="myNameInput" style="font-family:Inter,sans-serif;font-size:16px;padding:12px 14px;resize:none;height:auto" placeholder="e.g. Alex" maxlength="24" />
         </div>
         <button class="btn btn-primary" id="btnCreate" style="margin-bottom:10px">
           <i class="fas fa-plus-circle"></i> Create a room
@@ -537,7 +544,7 @@
   <div class="messages" id="messages"></div>
 
   <!-- ============ INPUT BAR ============ -->
-  <div class="input-bar">
+  <div class="input-bar" id="inputBar">
     <div class="input-wrap">
       <input id="msgInput" type="text" placeholder="Type an encrypted message…" autocomplete="off" disabled />
     </div>
@@ -624,6 +631,8 @@
   const encFooterText = $('encFooterText');
   const btnAudioCall = $('btnAudioCall');
   const btnVideoCall = $('btnVideoCall');
+  const appEl = $('app');
+  const inputBar = $('inputBar');
 
   // Call DOM
   const callOverlay = $('callOverlay');
@@ -657,10 +666,9 @@
     typingTimeout: null,
     isTypingSent: false,
     typingIndicatorEl: null,
-    // call state
     call: {
       active: false,
-      type: null,           // 'audio' | 'video'
+      type: null,
       incoming: false,
       localStream: null,
       remoteStream: null,
@@ -670,11 +678,53 @@
       muted: false,
       camOff: false,
     },
-    // perfect negotiation flags
     makingOffer: false,
     ignoreOffer: false,
-    isSettingRemoteAnswerPending: false,
   };
+
+  // ==================== MOBILE KEYBOARD FIX ====================
+  // Detect on-screen keyboard via visualViewport API and shrink app
+  function setupKeyboardHandling() {
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+      const vv = window.visualViewport;
+      const layoutHeight = window.innerHeight;
+      const viewportHeight = vv.height;
+
+      // keyboard is open if visual viewport is significantly smaller
+      const keyboardOpen = layoutHeight - viewportHeight > 120;
+
+      if (keyboardOpen) {
+        // shrink app to fit visual viewport (above keyboard)
+        appEl.style.height = viewportHeight + 'px';
+        appEl.style.maxHeight = viewportHeight + 'px';
+        appEl.style.position = 'fixed';
+        appEl.style.top = vv.offsetTop + 'px';
+        appEl.style.left = '0';
+        appEl.style.right = '0';
+        appEl.classList.add('keyboard-open');
+        // scroll to bottom so latest messages visible
+        setTimeout(() => {
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }, 60);
+      } else {
+        // restore
+        appEl.style.height = '';
+        appEl.style.maxHeight = '';
+        appEl.style.position = '';
+        appEl.style.top = '';
+        appEl.style.left = '';
+        appEl.style.right = '';
+        appEl.classList.remove('keyboard-open');
+      }
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+    // initial
+    handleResize();
+  }
 
   // ==================== CRYPTO ====================
   const enc = new TextEncoder();
@@ -735,7 +785,14 @@
     const div = document.createElement('div');
     div.className = 'system-msg'; div.textContent = text;
     messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollToBottom();
+  }
+
+  function scrollToBottom() {
+    // use rAF to ensure layout has settled
+    requestAnimationFrame(() => {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
   }
 
   function addMessage(text, dir) {
@@ -753,7 +810,7 @@
     bubble.appendChild(meta);
     div.appendChild(bubble);
     messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollToBottom();
   }
 
   // ==================== TYPING INDICATOR ====================
@@ -768,7 +825,7 @@
     div.appendChild(bubble);
     messagesEl.appendChild(div);
     state.typingIndicatorEl = div;
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollToBottom();
     updatePeerStatus(true, true);
   }
 
@@ -836,7 +893,7 @@
 
     msgDiv.appendChild(bubble);
     messagesEl.appendChild(msgDiv);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    scrollToBottom();
 
     const totalChars = chars.length;
     const staggerMs = totalChars > 60 ? 18 : totalChars > 30 ? 30 : 45;
@@ -886,7 +943,7 @@
       } else {
         bubble.appendChild(cursor);
       }
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollToBottom();
 
       if (revealIndex >= totalChars) {
         finished = true;
@@ -914,7 +971,7 @@
     sendBtn.disabled = false;
     btnAudioCall.disabled = false;
     btnVideoCall.disabled = false;
-    msgInput.focus();
+    msgInput.focus({ preventScroll: true });
     addSystemMessage('Secure channel established. You can chat, call, or video call.');
   }
 
@@ -979,11 +1036,8 @@
         playDecryptAnimation(plain, () => {});
         break;
 
-      // ============ CALL SIGNALING ============
       case 'call-offer':
-        // peer is calling us
         if (state.call.active) {
-          // busy — tell them
           state.dc.send(JSON.stringify({ type: 'call-busy' }));
           return;
         }
@@ -992,15 +1046,14 @@
         break;
 
       case 'call-answer':
-        // peer accepted our call
         if (!state.call.active) return;
         try {
           await state.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          // flush any ICE candidates collected while waiting
-          flushPendingCandidates();
           startCallTimer();
         } catch (e) {
           console.error('setRemoteDescription (answer) failed', e);
+          addSystemMessage('⚠️ Failed to connect call.');
+          endCall(false);
         }
         break;
 
@@ -1027,10 +1080,6 @@
           if (!state.ignoreOffer) console.error('addIceCandidate failed', e);
         }
         break;
-
-      case 'call-media-state':
-        // peer toggled their mute/cam — could show indicator, skip for simplicity
-        break;
     }
   }
 
@@ -1043,7 +1092,7 @@
     } catch (e) { console.error('sendKeyMessage', e); }
   }
 
-  // ==================== WEBRTC CONNECTION ====================
+  // ==================== WEBRTC ====================
   const ICE = { iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
@@ -1051,8 +1100,6 @@
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
   ]};
-
-  const pendingCandidates = [];
 
   function createPC() {
     if (state.pc) { try { state.pc.close(); } catch(e){} }
@@ -1068,14 +1115,12 @@
       }
     };
 
-    // ICE candidates for call renegotiation
     pc.onicecandidate = (event) => {
       if (event.candidate && state.dc && state.dc.readyState === 'open' && state.call.active) {
         state.dc.send(JSON.stringify({ type: 'call-ice', candidate: event.candidate.toJSON() }));
       }
     };
 
-    // remote track received → attach to video element
     pc.ontrack = (event) => {
       console.log('[Call] remote track', event.track.kind);
       state.call.remoteStream = event.streams[0];
@@ -1088,13 +1133,6 @@
       setupDataChannel(e.channel);
     };
     return pc;
-  }
-
-  function flushPendingCandidates() {
-    while (pendingCandidates.length) {
-      const c = pendingCandidates.shift();
-      state.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
-    }
   }
 
   function waitIce(pc, ms = 5000) {
@@ -1190,16 +1228,19 @@
       state.dc.send(JSON.stringify({ type: 'chat', body }));
       addMessage(text, 'out');
       msgInput.value = '';
-      msgInput.focus();
+      msgInput.focus({ preventScroll: true });
       sendTypingStop();
+      scrollToBottom();
     } catch (e) {
       console.error(e);
       addSystemMessage('⚠️ Failed to send message.');
     }
   }
 
-  // ==================== CALLING ====================
+  // ==================== CALLING (with graceful fallback) ====================
   async function getMedia(type) {
+    // Try video+audio first for video call, audio-only for audio call
+    // Gracefully fall back if devices are missing
     const constraints = {
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: type === 'video' ? {
@@ -1208,7 +1249,24 @@
         facingMode: 'user',
       } : false,
     };
-    return navigator.mediaDevices.getUserMedia(constraints);
+
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      console.warn('Primary getUserMedia failed:', err.name, err.message);
+      // If video call requested but camera/mic missing → try audio-only
+      if (type === 'video') {
+        try {
+          addSystemMessage('⚠️ Camera not available — starting audio-only call.');
+          return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } catch (err2) {
+          console.warn('Audio-only also failed:', err2.name, err2.message);
+          throw err2;
+        }
+      }
+      // If audio call and mic missing → try with video only? No, that's weird.
+      throw err;
+    }
   }
 
   async function startCall(type) {
@@ -1216,55 +1274,80 @@
     if (!state.dc || state.dc.readyState !== 'open') { addSystemMessage('Not connected.'); return; }
     if (!state.pc) { addSystemMessage('No connection.'); return; }
 
-    try {
-      const stream = await getMedia(type);
-      state.call.localStream = stream;
+    // Check if browser supports media
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      addSystemMessage('⚠️ Your browser does not support audio/video calls.');
+      return;
+    }
 
-      // add tracks to existing PC (renegotiation)
+    let stream;
+    try {
+      stream = await getMedia(type);
+    } catch (err) {
+      // Friendly error message
+      let msg = '⚠️ Could not access microphone/camera.';
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = '⚠️ No microphone or camera found on this device.';
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = '⚠️ Permission denied. Please allow microphone/camera access.';
+      } else if (err.name === 'NotReadableError') {
+        msg = '⚠️ Your microphone/camera is already in use by another app.';
+      }
+      addSystemMessage(msg + ' Chat still works!');
+      cleanupCall();
+      return;
+    }
+
+    // Determine actual type (if we fell back to audio-only from a video call)
+    const actualVideoTracks = stream.getVideoTracks();
+    const actualType = actualVideoTracks.length > 0 ? 'video' : 'audio';
+
+    state.call.localStream = stream;
+
+    try {
       stream.getTracks().forEach(track => {
         state.pc.addTrack(track, stream);
       });
 
       // show local video
       localVideo.srcObject = stream;
-      localVideoWrap.classList.add('active');
+      if (actualType === 'video') {
+        localVideoWrap.classList.add('active');
+      }
 
       // prepare UI
       state.call.active = true;
-      state.call.type = type;
+      state.call.type = actualType;
       state.call.muted = false;
-      state.call.camOff = false;
+      state.call.camOff = actualType === 'audio';
       callPeerName.textContent = state.peerName;
       callPeerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
-      callTitleText.textContent = type === 'video' ? 'Video call' : 'Audio call';
+      callTitleText.textContent = actualType === 'video' ? 'Video call' : 'Audio call';
       remotePlaceholder.style.display = 'flex';
-      remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+      remoteVideo.style.display = actualType === 'video' ? 'block' : 'none';
       callOverlay.classList.add('active');
       btnMute.classList.remove('muted');
-      btnCam.classList.toggle('cam-off', type === 'audio');
-      if (type === 'audio') {
-        // hide local video preview for audio
-        localVideoWrap.classList.remove('active');
-      }
+      btnCam.classList.toggle('cam-off', actualType === 'audio');
+      btnCam.innerHTML = actualType === 'audio'
+        ? '<i class="fas fa-video"></i>'
+        : '<i class="fas fa-video"></i>';
 
-      // renegotiate: create new offer with media tracks
+      // renegotiate
       const offer = await state.pc.createOffer();
       await state.pc.setLocalDescription(offer);
-
-      // wait for ICE gathering on the new offer
       const local = await waitIce(state.pc, 3000);
 
       state.dc.send(JSON.stringify({
         type: 'call-offer',
-        callType: type,
+        callType: actualType,
         sdp: { sdp: local.sdp, type: local.type },
         name: state.myName,
       }));
 
-      addSystemMessage(`📞 Calling ${state.peerName} (${type})…`);
+      addSystemMessage(`📞 Calling ${state.peerName} (${actualType})…`);
     } catch (err) {
       console.error('startCall failed', err);
-      addSystemMessage('⚠️ Could not access microphone/camera: ' + err.message);
+      addSystemMessage('⚠️ Could not start call: ' + err.message);
       cleanupCall();
     }
   }
@@ -1285,26 +1368,42 @@
     const offer = state.call.pendingOffer;
     state.call.pendingOffer = null;
 
-    try {
-      const stream = await getMedia(type);
-      state.call.localStream = stream;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      addSystemMessage('⚠️ Your browser does not support audio/video calls.');
+      state.dc.send(JSON.stringify({ type: 'call-end' }));
+      return;
+    }
 
+    let stream;
+    try {
+      stream = await getMedia(type);
+    } catch (err) {
+      let msg = '⚠️ Could not access microphone/camera.';
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = '⚠️ No microphone or camera found.';
+      } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        msg = '⚠️ Permission denied for microphone/camera.';
+      }
+      addSystemMessage(msg);
+      state.dc.send(JSON.stringify({ type: 'call-end' }));
+      cleanupCall();
+      return;
+    }
+
+    const actualType = stream.getVideoTracks().length > 0 ? 'video' : 'audio';
+    state.call.localStream = stream;
+
+    try {
       stream.getTracks().forEach(track => {
         state.pc.addTrack(track, stream);
       });
 
       localVideo.srcObject = stream;
-      if (type === 'video') localVideoWrap.classList.add('active');
+      if (actualType === 'video') localVideoWrap.classList.add('active');
 
-      // set remote offer
       await state.pc.setRemoteDescription(new RTCSessionDescription(offer.sdp));
-      flushPendingCandidates();
-
-      // create answer
       const answer = await state.pc.createAnswer();
       await state.pc.setLocalDescription(answer);
-
-      // wait ICE
       const local = await waitIce(state.pc, 3000);
 
       state.dc.send(JSON.stringify({
@@ -1314,22 +1413,22 @@
 
       // UI
       state.call.active = true;
-      state.call.type = type;
+      state.call.type = actualType;
       state.call.muted = false;
-      state.call.camOff = false;
+      state.call.camOff = actualType === 'audio';
       callPeerName.textContent = state.peerName;
       callPeerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
-      callTitleText.textContent = type === 'video' ? 'Video call' : 'Audio call';
+      callTitleText.textContent = actualType === 'video' ? 'Video call' : 'Audio call';
       remotePlaceholder.style.display = 'flex';
-      remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+      remoteVideo.style.display = actualType === 'video' ? 'block' : 'none';
       callOverlay.classList.add('active');
       btnMute.classList.remove('muted');
-      btnCam.classList.toggle('cam-off', type === 'audio');
+      btnCam.classList.toggle('cam-off', actualType === 'audio');
       startCallTimer();
       addSystemMessage('📞 Call accepted.');
     } catch (err) {
       console.error('acceptIncomingCall failed', err);
-      addSystemMessage('⚠️ Could not access media: ' + err.message);
+      addSystemMessage('⚠️ Could not accept call: ' + err.message);
       state.dc.send(JSON.stringify({ type: 'call-end' }));
       cleanupCall();
     }
@@ -1358,25 +1457,25 @@
   function toggleMute() {
     if (!state.call.localStream) return;
     const audioTrack = state.call.localStream.getAudioTracks()[0];
-    if (!audioTrack) return;
+    if (!audioTrack) {
+      addSystemMessage('⚠️ No microphone available.');
+      return;
+    }
     audioTrack.enabled = !audioTrack.enabled;
     state.call.muted = !audioTrack.enabled;
     btnMute.classList.toggle('muted', state.call.muted);
     btnMute.innerHTML = state.call.muted
       ? '<i class="fas fa-microphone-slash"></i>'
       : '<i class="fas fa-microphone"></i>';
-    // notify peer
-    if (state.dc && state.dc.readyState === 'open') {
-      state.dc.send(JSON.stringify({ type: 'call-media-state', muted: state.call.muted }));
-    }
   }
 
-  function toggleCam() {
+  async function toggleCam() {
     if (!state.call.localStream) return;
     const videoTrack = state.call.localStream.getVideoTracks()[0];
     if (!videoTrack) {
-      // no camera — try to add one
-      navigator.mediaDevices.getUserMedia({ video: true }).then(s => {
+      // Try to add camera on the fly
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: true });
         const vt = s.getVideoTracks()[0];
         state.call.localStream.addTrack(vt);
         if (state.pc) state.pc.addTrack(vt, state.call.localStream);
@@ -1385,7 +1484,19 @@
         state.call.camOff = false;
         btnCam.classList.remove('cam-off');
         btnCam.innerHTML = '<i class="fas fa-video"></i>';
-      }).catch(e => addSystemMessage('⚠️ Could not enable camera: ' + e.message));
+        // renegotiate to send new track
+        const offer = await state.pc.createOffer();
+        await state.pc.setLocalDescription(offer);
+        const local = await waitIce(state.pc, 2000);
+        state.dc.send(JSON.stringify({
+          type: 'call-offer',
+          callType: 'video',
+          sdp: { sdp: local.sdp, type: local.type },
+          name: state.myName,
+        }));
+      } catch (e) {
+        addSystemMessage('⚠️ Could not enable camera: ' + e.message);
+      }
       return;
     }
     videoTrack.enabled = !videoTrack.enabled;
@@ -1395,9 +1506,6 @@
       ? '<i class="fas fa-video-slash"></i>'
       : '<i class="fas fa-video"></i>';
     localVideoWrap.classList.toggle('active', !state.call.camOff);
-    if (state.dc && state.dc.readyState === 'open') {
-      state.dc.send(JSON.stringify({ type: 'call-media-state', camOff: state.call.camOff }));
-    }
   }
 
   function endCall(notifyPeer = true) {
@@ -1407,13 +1515,11 @@
       state.dc.send(JSON.stringify({ type: 'call-end' }));
     }
 
-    // stop local tracks
     if (state.call.localStream) {
       state.call.localStream.getTracks().forEach(t => t.stop());
       state.call.localStream = null;
     }
 
-    // remove tracks from PC
     if (state.pc) {
       try {
         state.pc.getSenders().forEach(sender => {
@@ -1424,7 +1530,6 @@
       } catch(e){}
     }
 
-    // reset video elements
     remoteVideo.srcObject = null;
     localVideo.srcObject = null;
     localVideoWrap.classList.remove('active');
@@ -1509,6 +1614,11 @@
     if (e.key === 'Enter') { e.preventDefault(); sendChatMessage(); }
   });
 
+  // When keyboard opens/closes, scroll to bottom
+  msgInput.addEventListener('focus', () => {
+    setTimeout(() => scrollToBottom(), 300);
+  });
+
   // Call buttons
   btnAudioCall.addEventListener('click', () => startCall('audio'));
   btnVideoCall.addEventListener('click', () => startCall('video'));
@@ -1518,10 +1628,12 @@
   btnAccept.addEventListener('click', acceptIncomingCall);
   btnDecline.addEventListener('click', declineIncomingCall);
 
-  // Cleanup on tab close
   window.addEventListener('beforeunload', () => {
     if (state.call.active) endCall(true);
   });
+
+  // Init keyboard handling
+  setupKeyboardHandling();
 
   window.__state = state;
 })();
