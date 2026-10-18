@@ -25,6 +25,8 @@
     box-shadow: 0 30px 70px -20px rgba(0,0,0,0.7);
     display: flex; flex-direction: column; overflow: hidden; position: relative;
   }
+
+  /* ============ CONNECT SCREEN ============ */
   .connect-screen {
     position: absolute; inset: 0; z-index: 50;
     background: linear-gradient(160deg, #0d1424 0%, #0a0f1c 100%);
@@ -86,6 +88,8 @@
     border-radius: 50%; animation: spin .7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ CHAT HEADER ============ */
   .chat-header {
     padding: 14px 20px; background: #101726;
     border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -106,13 +110,178 @@
   .peer-status.online .dot { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
   .peer-status.typing .dot { background: #f5a623; box-shadow: 0 0 8px #f5a623; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
-  .header-badges { display: flex; align-items: center; gap: 8px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
   .badge {
     display: flex; align-items: center; gap: 6px; font-size: 0.72rem;
     padding: 6px 11px; border-radius: 100px; font-weight: 600;
     border: 1px solid #2ecc7130; background: #2ecc7115; color: #2ecc71;
   }
   .badge i { font-size: 0.7rem; }
+  .header-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid #2b3852;
+    background: #1a2236; color: #b9c6e4; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem; transition: all .15s;
+  }
+  .header-btn:hover { background: #222d45; color: white; border-color: #3b4866; }
+  .header-btn.active { background: #2a4bff; color: white; border-color: #2a4bff; box-shadow: 0 0 14px #2a4bff80; }
+
+  /* ============ CALL OVERLAY ============ */
+  .call-overlay {
+    position: absolute; inset: 0; z-index: 40;
+    background: radial-gradient(circle at 30% 30%, #1a2440 0%, #080b14 90%);
+    display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .3s, visibility .3s;
+  }
+  .call-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
+
+  .call-top {
+    padding: 16px 22px; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+  }
+  .call-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.85rem; font-weight: 600; color: #b9c6e4;
+  }
+  .call-title .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #e74c3c; box-shadow: 0 0 8px #e74c3c;
+    animation: pulse 1.2s infinite;
+  }
+  .call-timer {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.85rem; color: #b9c6e4;
+    background: #0e1421; padding: 6px 14px; border-radius: 100px;
+    border: 1px solid #1e283c;
+  }
+
+  .call-stage {
+    flex: 1; position: relative; display: flex;
+    align-items: center; justify-content: center; padding: 16px;
+    min-height: 0;
+  }
+
+  /* Remote video (main) */
+  .remote-video-wrap {
+    width: 100%; height: 100%; max-width: 900px; max-height: 100%;
+    border-radius: 22px; overflow: hidden; position: relative;
+    background: #0a101c; border: 1px solid #1e283c;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #remoteVideo {
+    width: 100%; height: 100%; object-fit: cover; background: #0a101c;
+  }
+  .remote-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 16px;
+    background: radial-gradient(circle at 50% 40%, #1c2640 0%, #0a101c 90%);
+  }
+  .remote-placeholder .avatar-big {
+    width: 110px; height: 110px; border-radius: 30px;
+    background: linear-gradient(135deg,#2a4bff,#7b3aff);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 2.4rem;
+    box-shadow: 0 20px 50px -10px #2a4bff80;
+  }
+  .remote-placeholder .name {
+    font-size: 1.3rem; font-weight: 600; color: #eef3fc;
+  }
+  .remote-placeholder .sub {
+    font-size: 0.8rem; color: #8693b1;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .remote-placeholder .sub i { color: #f5a623; }
+
+  /* Local video (picture-in-picture) */
+  .local-video-wrap {
+    position: absolute; bottom: 22px; right: 22px;
+    width: 180px; height: 135px; border-radius: 16px;
+    overflow: hidden; background: #0a101c;
+    border: 2px solid #2a4bff80;
+    box-shadow: 0 12px 30px -8px rgba(0,0,0,0.7);
+    display: none;
+  }
+  .local-video-wrap.active { display: block; }
+  #localVideo {
+    width: 100%; height: 100%; object-fit: cover; background: #0a101c;
+    transform: scaleX(-1);
+  }
+  .local-video-wrap .local-label {
+    position: absolute; top: 6px; left: 8px;
+    background: rgba(0,0,0,0.6); color: white;
+    font-size: 0.6rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 100px; letter-spacing: 0.04em;
+  }
+
+  /* ============ CALL CONTROLS ============ */
+  .call-controls {
+    padding: 18px 22px 24px; display: flex;
+    align-items: center; justify-content: center;
+    gap: 14px; flex-shrink: 0;
+  }
+  .call-ctrl {
+    width: 58px; height: 58px; border-radius: 50%; border: none;
+    background: #1a2236; color: #b9c6e4; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 1.2rem; transition: all .15s; position: relative;
+    border: 1px solid #2b3852;
+  }
+  .call-ctrl:hover { background: #222d45; color: white; transform: translateY(-2px); }
+  .call-ctrl.muted { background: #e74c3c20; border-color: #e74c3c60; color: #e74c3c; }
+  .call-ctrl.muted:hover { background: #e74c3c30; }
+  .call-ctrl.cam-off { background: #e74c3c20; border-color: #e74c3c60; color: #e74c3c; }
+  .call-ctrl.cam-off:hover { background: #e74c3c30; }
+  .call-ctrl.end {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white; border-color: transparent;
+    box-shadow: 0 10px 26px -8px #e74c3c90;
+    width: 64px; height: 64px;
+  }
+  .call-ctrl.end:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 30px -8px #e74c3cb0; }
+  .call-ctrl.accept {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white; border-color: transparent;
+    box-shadow: 0 10px 26px -8px #2ecc7190;
+  }
+  .call-ctrl.accept:hover { transform: translateY(-2px) scale(1.04); }
+
+  /* ============ INCOMING CALL MODAL ============ */
+  .incoming-call {
+    position: absolute; inset: 0; z-index: 60;
+    background: rgba(8, 11, 20, 0.85);
+    backdrop-filter: blur(10px);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .incoming-call.active { display: flex; animation: fadeIn .3s ease; }
+  .incoming-card {
+    background: #101726; border: 1px solid #1e283c;
+    border-radius: 26px; padding: 30px 28px;
+    max-width: 360px; width: 100%; text-align: center;
+    box-shadow: 0 30px 70px -20px rgba(0,0,0,0.8);
+    animation: callPulse 1.5s infinite;
+  }
+  @keyframes callPulse {
+    0%, 100% { box-shadow: 0 30px 70px -20px rgba(0,0,0,0.8), 0 0 0 0 rgba(42,75,255,0.4); }
+    50% { box-shadow: 0 30px 70px -20px rgba(0,0,0,0.8), 0 0 0 14px rgba(42,75,255,0); }
+  }
+  .incoming-card .avatar-big {
+    width: 90px; height: 90px; border-radius: 26px; margin: 0 auto 16px;
+    background: linear-gradient(135deg,#2a4bff,#7b3aff);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 2rem;
+  }
+  .incoming-card .caller-name { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+  .incoming-card .call-type {
+    font-size: 0.85rem; color: #8693b1; margin-bottom: 26px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .incoming-card .call-type i { color: #2ecc71; }
+  .incoming-actions { display: flex; gap: 16px; justify-content: center; }
+
+  /* ============ MESSAGES AREA ============ */
   .messages {
     flex: 1; overflow-y: auto; padding: 22px 20px;
     display: flex; flex-direction: column; gap: 10px;
@@ -140,7 +309,7 @@
     border: 1px solid #1e283c; max-width: 90%; text-align: center;
   }
 
-  /* ======= TYPING INDICATOR ======= */
+  /* Typing indicator */
   .typing-bubble {
     display: flex; align-items: center; gap: 4px;
     padding: 12px 18px;
@@ -162,7 +331,7 @@
     30% { transform: translateY(-5px); opacity: 1; background: #5b8cff; }
   }
 
-  /* ======= DECRYPTION BUBBLE (character scramble) ======= */
+  /* Decryption animation */
   .decrypt-bubble {
     padding: 12px 16px;
     background: #1a2135;
@@ -228,6 +397,7 @@
   }
   @keyframes blink { 50% { opacity: 0; } }
 
+  /* ============ INPUT BAR ============ */
   .input-bar {
     padding: 12px 16px 16px; background: #101726;
     border-top: 1px solid rgba(255,255,255,0.05);
@@ -258,30 +428,35 @@
     justify-content: center; gap: 6px; text-align: center; flex-shrink: 0;
   }
   .enc-footer i { color: #2ecc71; }
+
   @media (max-width: 600px) {
     body { padding: 0; }
     .app { height: 100vh; max-height: none; border-radius: 0; border: none; }
     .messages { padding: 16px 14px; }
     .msg { max-width: 88%; }
-    .header-badges .badge span { display: none; }
+    .badge span { display: none; }
+    .local-video-wrap { width: 120px; height: 90px; bottom: 14px; right: 14px; }
+    .call-ctrl { width: 50px; height: 50px; font-size: 1rem; }
+    .call-ctrl.end { width: 56px; height: 56px; }
   }
 </style>
 </head>
 <body>
 <div class="app" id="app">
+  <!-- ============ CONNECT SCREEN ============ -->
   <div class="connect-screen" id="connectScreen">
     <div class="connect-card">
       <div class="brand">
         <div class="brand-icon"><i class="fas fa-lock"></i></div>
         <h1>SecureChat</h1>
       </div>
-      <p class="brand-sub">Peer-to-peer chat with real end-to-end encryption</p>
+      <p class="brand-sub">Peer-to-peer chat · audio · video · all E2E encrypted</p>
 
       <div class="step active" id="stepRole">
         <div class="step-title">Get started</div>
         <p class="help-text">
           One person <strong>creates</strong> an invite, the other <strong>joins</strong>.
-          All messages are encrypted on your device — nothing readable ever leaves it.
+          All messages, audio, and video are encrypted on your device.
         </p>
         <div class="field">
           <label>Your display name</label>
@@ -338,6 +513,7 @@
     </div>
   </div>
 
+  <!-- ============ CHAT HEADER ============ -->
   <header class="chat-header">
     <div class="peer-info">
       <div class="peer-avatar" id="peerAvatar">?</div>
@@ -346,13 +522,21 @@
         <div class="peer-status" id="peerStatus"><span class="dot"></span> <span class="txt">Connecting</span></div>
       </div>
     </div>
-    <div class="header-badges">
+    <div class="header-right">
       <div class="badge" id="encBadge"><i class="fas fa-lock"></i> <span>E2E</span></div>
+      <button class="header-btn" id="btnAudioCall" title="Audio call" disabled>
+        <i class="fas fa-phone"></i>
+      </button>
+      <button class="header-btn" id="btnVideoCall" title="Video call" disabled>
+        <i class="fas fa-video"></i>
+      </button>
     </div>
   </header>
 
+  <!-- ============ MESSAGES ============ -->
   <div class="messages" id="messages"></div>
 
+  <!-- ============ INPUT BAR ============ -->
   <div class="input-bar">
     <div class="input-wrap">
       <input id="msgInput" type="text" placeholder="Type an encrypted message…" autocomplete="off" disabled />
@@ -362,7 +546,66 @@
 
   <div class="enc-footer" id="encFooter">
     <i class="fas fa-shield-alt"></i>
-    <span id="encFooterText">End-to-end encrypted · only you and your friend can read messages</span>
+    <span id="encFooterText">End-to-end encrypted · messages, audio & video protected</span>
+  </div>
+
+  <!-- ============ CALL OVERLAY ============ -->
+  <div class="call-overlay" id="callOverlay">
+    <div class="call-top">
+      <div class="call-title">
+        <span class="live-dot"></span>
+        <span id="callTitleText">In call</span>
+      </div>
+      <div class="call-timer" id="callTimer">00:00</div>
+    </div>
+
+    <div class="call-stage">
+      <div class="remote-video-wrap">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="remote-placeholder" id="remotePlaceholder">
+          <div class="avatar-big" id="callPeerAvatar">?</div>
+          <div class="name" id="callPeerName">Friend</div>
+          <div class="sub"><i class="fas fa-lock"></i> End-to-end encrypted</div>
+        </div>
+      </div>
+
+      <div class="local-video-wrap" id="localVideoWrap">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div class="local-label">You</div>
+      </div>
+    </div>
+
+    <div class="call-controls">
+      <button class="call-ctrl" id="btnMute" title="Mute">
+        <i class="fas fa-microphone"></i>
+      </button>
+      <button class="call-ctrl" id="btnCam" title="Camera">
+        <i class="fas fa-video"></i>
+      </button>
+      <button class="call-ctrl end" id="btnEndCall" title="End call">
+        <i class="fas fa-phone-slash"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ INCOMING CALL MODAL ============ -->
+  <div class="incoming-call" id="incomingCall">
+    <div class="incoming-card">
+      <div class="avatar-big" id="incomingAvatar">?</div>
+      <div class="caller-name" id="incomingName">Friend</div>
+      <div class="call-type">
+        <i class="fas fa-lock"></i>
+        <span id="incomingType">Incoming call…</span>
+      </div>
+      <div class="incoming-actions">
+        <button class="call-ctrl end" id="btnDecline" title="Decline">
+          <i class="fas fa-phone-slash"></i>
+        </button>
+        <button class="call-ctrl accept" id="btnAccept" title="Accept">
+          <i class="fas fa-phone"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -378,8 +621,29 @@
   const peerNameEl = $('peerName');
   const peerAvatar = $('peerAvatar');
   const peerStatus = $('peerStatus');
-  const encBadge = $('encBadge');
   const encFooterText = $('encFooterText');
+  const btnAudioCall = $('btnAudioCall');
+  const btnVideoCall = $('btnVideoCall');
+
+  // Call DOM
+  const callOverlay = $('callOverlay');
+  const remoteVideo = $('remoteVideo');
+  const localVideo = $('localVideo');
+  const localVideoWrap = $('localVideoWrap');
+  const remotePlaceholder = $('remotePlaceholder');
+  const callPeerName = $('callPeerName');
+  const callPeerAvatar = $('callPeerAvatar');
+  const callTimer = $('callTimer');
+  const callTitleText = $('callTitleText');
+  const btnMute = $('btnMute');
+  const btnCam = $('btnCam');
+  const btnEndCall = $('btnEndCall');
+  const incomingCall = $('incomingCall');
+  const incomingName = $('incomingName');
+  const incomingAvatar = $('incomingAvatar');
+  const incomingType = $('incomingType');
+  const btnAccept = $('btnAccept');
+  const btnDecline = $('btnDecline');
 
   const state = {
     myName: '',
@@ -393,10 +657,26 @@
     typingTimeout: null,
     isTypingSent: false,
     typingIndicatorEl: null,
-    decryptAnimating: false,
+    // call state
+    call: {
+      active: false,
+      type: null,           // 'audio' | 'video'
+      incoming: false,
+      localStream: null,
+      remoteStream: null,
+      timerInterval: null,
+      startTime: 0,
+      pendingOffer: null,
+      muted: false,
+      camOff: false,
+    },
+    // perfect negotiation flags
+    makingOffer: false,
+    ignoreOffer: false,
+    isSettingRemoteAnswerPending: false,
   };
 
-  // ---------------- Crypto ----------------
+  // ==================== CRYPTO ====================
   const enc = new TextEncoder();
   const dec = new TextDecoder();
 
@@ -430,7 +710,7 @@
     return dec.decode(pt);
   }
 
-  // ---------------- UI Helpers ----------------
+  // ==================== UI HELPERS ====================
   function showStep(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
@@ -476,7 +756,7 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // ---------------- Typing Indicator ----------------
+  // ==================== TYPING INDICATOR ====================
   function showTypingIndicator() {
     if (state.typingIndicatorEl) return;
     removeTypingIndicator();
@@ -500,138 +780,6 @@
     }
   }
 
-  // ---------------- Character-by-Character Decryption Animation ----------------
-  // Characters used for scrambling (looks "encrypted")
-  const SCRAMBLE_CHARS = 'ABCDEFabcdef0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~`ΣΠΩΔ¥£€§±∞█▓▒░◆◇■□●○';
-
-  function scrambleChar() {
-    return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-  }
-
-  /**
-   * Play a character-by-character "decryption" animation.
-   * Each character starts scrambled and progressively locks into the real char.
-   * The reveal happens left-to-right with a small overlap for a "cascade" feel.
-   */
-  function playDecryptAnimation(plaintext, onComplete) {
-    // Create message bubble
-    const msgDiv = document.createElement('div');
-    msgDiv.className = 'msg in';
-
-    const bubble = document.createElement('div');
-    bubble.className = 'decrypt-bubble';
-
-    // Build character spans
-    const chars = Array.from(plaintext);
-    const charEls = [];
-
-    chars.forEach((ch) => {
-      const span = document.createElement('span');
-      span.className = 'char locked';
-      // Locked state = fully scrambled
-      span.textContent = ch === ' ' ? ' ' : scrambleChar();
-      if (ch === ' ') span.style.minWidth = '0.3em';
-      bubble.appendChild(span);
-      charEls.push({ el: span, real: ch, revealed: false });
-    });
-
-    // Cursor
-    const cursor = document.createElement('span');
-    cursor.className = 'decrypt-cursor';
-    bubble.appendChild(cursor);
-
-    msgDiv.appendChild(bubble);
-    messagesEl.appendChild(msgDiv);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-
-    // ---- Animation loop ----
-    // Each character has a target "reveal time". They reveal left-to-right.
-    const totalChars = chars.length;
-    // Stagger: reveal one char every N ms. Faster for long messages.
-    const staggerMs = totalChars > 60 ? 18 : totalChars > 30 ? 30 : 45;
-    // Before a char reveals, it will flicker random chars a few times.
-    const flickerInterval = 55; // ms between random flashes
-
-    // Initialize "revealAt" times
-    const startTime = performance.now();
-    let revealIndex = 0;
-    let lastFlickerTime = 0;
-    let finished = false;
-
-    function flickerAll() {
-      // Update every not-yet-revealed char to a new random char
-      for (let i = 0; i < charEls.length; i++) {
-        const c = charEls[i];
-        if (c.revealed) continue;
-        if (c.real === ' ') continue; // keep spaces
-        c.el.textContent = scrambleChar();
-      }
-    }
-
-    function revealChar(index) {
-      const c = charEls[index];
-      if (!c || c.revealed) return;
-      c.revealed = true;
-      c.el.textContent = c.real === ' ' ? ' ' : c.real;
-      c.el.classList.remove('locked', 'scrambled');
-      c.el.classList.add('revealed');
-    }
-
-    function tick(now) {
-      if (finished) return;
-
-      // Flicker unrevealed chars at a steady rate
-      if (now - lastFlickerTime > flickerInterval) {
-        flickerAll();
-        lastFlickerTime = now;
-      }
-
-      // Reveal characters whose time has come
-      while (revealIndex < totalChars) {
-        const targetRevealTime = startTime + (revealIndex * staggerMs);
-        if (now >= targetRevealTime) {
-          revealChar(revealIndex);
-          revealIndex++;
-        } else {
-          break;
-        }
-      }
-
-      // Move cursor to just after last revealed char
-      const revealedCount = revealIndex;
-      if (revealedCount < totalChars) {
-        // Insert cursor after the last revealed char (or at start if none)
-        const anchor = charEls[Math.max(0, revealedCount - 1)];
-        if (anchor && anchor.el.nextSibling !== cursor) {
-          anchor.el.parentNode.insertBefore(cursor, anchor.el.nextSibling);
-        }
-      } else {
-        // All revealed – move cursor to end
-        bubble.appendChild(cursor);
-      }
-
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-
-      if (revealIndex >= totalChars) {
-        // Done revealing – brief pause then remove cursor and finalize
-        finished = true;
-        setTimeout(() => {
-          cursor.remove();
-          // Convert to normal message bubble
-          msgDiv.remove();
-          addMessage(plaintext, 'in');
-          if (onComplete) onComplete();
-        }, 300);
-        return;
-      }
-
-      requestAnimationFrame(tick);
-    }
-
-    requestAnimationFrame(tick);
-  }
-
-  // ---------------- Send typing signal ----------------
   function sendTypingSignal() {
     if (!state.dc || state.dc.readyState !== 'open') return;
     if (state.isTypingSent) {
@@ -658,7 +806,104 @@
     }
   }
 
-  // ---------------- Enable Chat ----------------
+  // ==================== DECRYPTION ANIMATION ====================
+  const SCRAMBLE_CHARS = 'ABCDEFabcdef0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~`ΣΠΩΔ¥£€§±∞█▓▒░◆◇■□●○';
+  function scrambleChar() {
+    return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+  }
+
+  function playDecryptAnimation(plaintext, onComplete) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'msg in';
+    const bubble = document.createElement('div');
+    bubble.className = 'decrypt-bubble';
+
+    const chars = Array.from(plaintext);
+    const charEls = [];
+
+    chars.forEach((ch) => {
+      const span = document.createElement('span');
+      span.className = 'char locked';
+      span.textContent = ch === ' ' ? ' ' : scrambleChar();
+      if (ch === ' ') span.style.minWidth = '0.3em';
+      bubble.appendChild(span);
+      charEls.push({ el: span, real: ch, revealed: false });
+    });
+
+    const cursor = document.createElement('span');
+    cursor.className = 'decrypt-cursor';
+    bubble.appendChild(cursor);
+
+    msgDiv.appendChild(bubble);
+    messagesEl.appendChild(msgDiv);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    const totalChars = chars.length;
+    const staggerMs = totalChars > 60 ? 18 : totalChars > 30 ? 30 : 45;
+    const flickerInterval = 55;
+
+    const startTime = performance.now();
+    let revealIndex = 0;
+    let lastFlickerTime = 0;
+    let finished = false;
+
+    function flickerAll() {
+      for (let i = 0; i < charEls.length; i++) {
+        const c = charEls[i];
+        if (c.revealed || c.real === ' ') continue;
+        c.el.textContent = scrambleChar();
+      }
+    }
+
+    function revealChar(index) {
+      const c = charEls[index];
+      if (!c || c.revealed) return;
+      c.revealed = true;
+      c.el.textContent = c.real === ' ' ? ' ' : c.real;
+      c.el.classList.remove('locked', 'scrambled');
+      c.el.classList.add('revealed');
+    }
+
+    function tick(now) {
+      if (finished) return;
+      if (now - lastFlickerTime > flickerInterval) {
+        flickerAll();
+        lastFlickerTime = now;
+      }
+      while (revealIndex < totalChars) {
+        const targetRevealTime = startTime + (revealIndex * staggerMs);
+        if (now >= targetRevealTime) {
+          revealChar(revealIndex);
+          revealIndex++;
+        } else break;
+      }
+      const revealedCount = revealIndex;
+      if (revealedCount < totalChars) {
+        const anchor = charEls[Math.max(0, revealedCount - 1)];
+        if (anchor && anchor.el.nextSibling !== cursor) {
+          anchor.el.parentNode.insertBefore(cursor, anchor.el.nextSibling);
+        }
+      } else {
+        bubble.appendChild(cursor);
+      }
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      if (revealIndex >= totalChars) {
+        finished = true;
+        setTimeout(() => {
+          cursor.remove();
+          msgDiv.remove();
+          addMessage(plaintext, 'in');
+          if (onComplete) onComplete();
+        }, 300);
+        return;
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ==================== ENABLE CHAT ====================
   function enableChat(peerName) {
     state.peerName = peerName || 'Friend';
     peerNameEl.textContent = state.peerName;
@@ -667,11 +912,13 @@
     hideConnectScreen();
     msgInput.disabled = false;
     sendBtn.disabled = false;
+    btnAudioCall.disabled = false;
+    btnVideoCall.disabled = false;
     msgInput.focus();
-    addSystemMessage('Secure channel established. Messages are end-to-end encrypted.');
+    addSystemMessage('Secure channel established. You can chat, call, or video call.');
   }
 
-  // ---------------- Data Channel ----------------
+  // ==================== DATA CHANNEL ====================
   function setupDataChannel(dc) {
     state.dc = dc;
 
@@ -685,48 +932,106 @@
     dc.onclose = () => {
       updatePeerStatus(false);
       msgInput.disabled = true; sendBtn.disabled = true;
+      btnAudioCall.disabled = true; btnVideoCall.disabled = true;
       addSystemMessage('Disconnected.');
+      if (state.call.active) endCall(false);
     };
     dc.onerror = (e) => console.error('[DC] error', e);
 
     dc.onmessage = async (event) => {
       try {
         const msg = JSON.parse(event.data);
-
-        if (msg.type === 'hello') {
-          state.peerName = msg.name || 'Friend';
-          peerNameEl.textContent = state.peerName;
-          peerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
-        } else if (msg.type === 'key') {
-          if (!msg.pub) return;
-          try {
-            const peerPub = await importPublicKey(msg.pub);
-            state.sharedKey = await deriveSharedKey(state.myKeyPair.privateKey, peerPub);
-            encFooterText.textContent = 'End-to-end encrypted · only you and your friend can read messages';
-            addSystemMessage('🔐 Encryption keys exchanged. You can chat securely.');
-          } catch (err) {
-            console.error('Key derivation failed', err);
-            addSystemMessage('⚠️ Key exchange failed.');
-          }
-        } else if (msg.type === 'typing') {
-          if (msg.state === 'start') showTypingIndicator();
-          else removeTypingIndicator();
-        } else if (msg.type === 'chat') {
-          removeTypingIndicator();
-          let plain;
-          try {
-            plain = await decryptText(msg.body);
-          } catch (err) {
-            console.error('Decrypt failed', err);
-            plain = '⚠️ [Unable to decrypt message]';
-          }
-          // Play character-by-character decryption animation
-          playDecryptAnimation(plain, () => {
-            // done — nothing extra needed
-          });
-        }
+        await handleMessage(msg);
       } catch (err) { console.error('Bad message', err); }
     };
+  }
+
+  async function handleMessage(msg) {
+    switch (msg.type) {
+      case 'hello':
+        state.peerName = msg.name || 'Friend';
+        peerNameEl.textContent = state.peerName;
+        peerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
+        break;
+
+      case 'key':
+        if (!msg.pub) return;
+        try {
+          const peerPub = await importPublicKey(msg.pub);
+          state.sharedKey = await deriveSharedKey(state.myKeyPair.privateKey, peerPub);
+          encFooterText.textContent = 'End-to-end encrypted · messages, audio & video protected';
+          addSystemMessage('🔐 Encryption keys exchanged. You can chat, call, or video call.');
+        } catch (err) {
+          console.error('Key derivation failed', err);
+        }
+        break;
+
+      case 'typing':
+        if (msg.state === 'start') showTypingIndicator();
+        else removeTypingIndicator();
+        break;
+
+      case 'chat':
+        removeTypingIndicator();
+        let plain;
+        try { plain = await decryptText(msg.body); }
+        catch (err) { plain = '⚠️ [Unable to decrypt message]'; }
+        playDecryptAnimation(plain, () => {});
+        break;
+
+      // ============ CALL SIGNALING ============
+      case 'call-offer':
+        // peer is calling us
+        if (state.call.active) {
+          // busy — tell them
+          state.dc.send(JSON.stringify({ type: 'call-busy' }));
+          return;
+        }
+        state.call.pendingOffer = msg;
+        showIncomingCall(msg.callType, msg.name);
+        break;
+
+      case 'call-answer':
+        // peer accepted our call
+        if (!state.call.active) return;
+        try {
+          await state.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          // flush any ICE candidates collected while waiting
+          flushPendingCandidates();
+          startCallTimer();
+        } catch (e) {
+          console.error('setRemoteDescription (answer) failed', e);
+        }
+        break;
+
+      case 'call-decline':
+        addSystemMessage('📞 Call declined.');
+        if (state.call.active) endCall(false);
+        break;
+
+      case 'call-busy':
+        addSystemMessage('📞 Peer is in another call.');
+        if (state.call.active) endCall(false);
+        break;
+
+      case 'call-end':
+        addSystemMessage('📞 Call ended by peer.');
+        if (state.call.active) endCall(false);
+        break;
+
+      case 'call-ice':
+        if (!state.pc) break;
+        try {
+          await state.pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        } catch (e) {
+          if (!state.ignoreOffer) console.error('addIceCandidate failed', e);
+        }
+        break;
+
+      case 'call-media-state':
+        // peer toggled their mute/cam — could show indicator, skip for simplicity
+        break;
+    }
   }
 
   async function sendKeyMessage() {
@@ -738,7 +1043,7 @@
     } catch (e) { console.error('sendKeyMessage', e); }
   }
 
-  // ---------------- WebRTC ----------------
+  // ==================== WEBRTC CONNECTION ====================
   const ICE = { iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
@@ -746,6 +1051,8 @@
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
   ]};
+
+  const pendingCandidates = [];
 
   function createPC() {
     if (state.pc) { try { state.pc.close(); } catch(e){} }
@@ -761,11 +1068,33 @@
       }
     };
 
+    // ICE candidates for call renegotiation
+    pc.onicecandidate = (event) => {
+      if (event.candidate && state.dc && state.dc.readyState === 'open' && state.call.active) {
+        state.dc.send(JSON.stringify({ type: 'call-ice', candidate: event.candidate.toJSON() }));
+      }
+    };
+
+    // remote track received → attach to video element
+    pc.ontrack = (event) => {
+      console.log('[Call] remote track', event.track.kind);
+      state.call.remoteStream = event.streams[0];
+      remoteVideo.srcObject = event.streams[0];
+      remotePlaceholder.style.display = 'none';
+    };
+
     pc.ondatachannel = (e) => {
       console.log('[DC] incoming');
       setupDataChannel(e.channel);
     };
     return pc;
+  }
+
+  function flushPendingCandidates() {
+    while (pendingCandidates.length) {
+      const c = pendingCandidates.shift();
+      state.pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+    }
   }
 
   function waitIce(pc, ms = 5000) {
@@ -780,7 +1109,7 @@
     });
   }
 
-  // ---------------- Creator Flow ----------------
+  // ==================== CREATOR FLOW ====================
   async function startCreator() {
     state.isCreator = true;
     state.myName = $('myNameInput').value.trim() || 'Anonymous';
@@ -817,7 +1146,7 @@
     }
   }
 
-  // ---------------- Joiner Flow ----------------
+  // ==================== JOINER FLOW ====================
   async function startJoiner() {
     state.isCreator = false;
     state.myName = $('myNameInput').value.trim() || 'Anonymous';
@@ -850,7 +1179,7 @@
     }
   }
 
-  // ---------------- Send Message ----------------
+  // ==================== SEND CHAT MESSAGE ====================
   async function sendChatMessage() {
     const text = msgInput.value.trim();
     if (!text) return;
@@ -869,7 +1198,275 @@
     }
   }
 
-  // ---------------- Bind Events ----------------
+  // ==================== CALLING ====================
+  async function getMedia(type) {
+    const constraints = {
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: type === 'video' ? {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user',
+      } : false,
+    };
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+
+  async function startCall(type) {
+    if (state.call.active) return;
+    if (!state.dc || state.dc.readyState !== 'open') { addSystemMessage('Not connected.'); return; }
+    if (!state.pc) { addSystemMessage('No connection.'); return; }
+
+    try {
+      const stream = await getMedia(type);
+      state.call.localStream = stream;
+
+      // add tracks to existing PC (renegotiation)
+      stream.getTracks().forEach(track => {
+        state.pc.addTrack(track, stream);
+      });
+
+      // show local video
+      localVideo.srcObject = stream;
+      localVideoWrap.classList.add('active');
+
+      // prepare UI
+      state.call.active = true;
+      state.call.type = type;
+      state.call.muted = false;
+      state.call.camOff = false;
+      callPeerName.textContent = state.peerName;
+      callPeerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
+      callTitleText.textContent = type === 'video' ? 'Video call' : 'Audio call';
+      remotePlaceholder.style.display = 'flex';
+      remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+      callOverlay.classList.add('active');
+      btnMute.classList.remove('muted');
+      btnCam.classList.toggle('cam-off', type === 'audio');
+      if (type === 'audio') {
+        // hide local video preview for audio
+        localVideoWrap.classList.remove('active');
+      }
+
+      // renegotiate: create new offer with media tracks
+      const offer = await state.pc.createOffer();
+      await state.pc.setLocalDescription(offer);
+
+      // wait for ICE gathering on the new offer
+      const local = await waitIce(state.pc, 3000);
+
+      state.dc.send(JSON.stringify({
+        type: 'call-offer',
+        callType: type,
+        sdp: { sdp: local.sdp, type: local.type },
+        name: state.myName,
+      }));
+
+      addSystemMessage(`📞 Calling ${state.peerName} (${type})…`);
+    } catch (err) {
+      console.error('startCall failed', err);
+      addSystemMessage('⚠️ Could not access microphone/camera: ' + err.message);
+      cleanupCall();
+    }
+  }
+
+  function showIncomingCall(type, name) {
+    incomingName.textContent = name || state.peerName || 'Friend';
+    incomingAvatar.textContent = (incomingName.textContent[0] || '?').toUpperCase();
+    incomingType.textContent = type === 'video' ? 'Incoming video call…' : 'Incoming audio call…';
+    incomingCall.classList.add('active');
+    incomingCall.dataset.callType = type;
+  }
+
+  async function acceptIncomingCall() {
+    const type = incomingCall.dataset.callType || 'audio';
+    incomingCall.classList.remove('active');
+
+    if (!state.call.pendingOffer) return;
+    const offer = state.call.pendingOffer;
+    state.call.pendingOffer = null;
+
+    try {
+      const stream = await getMedia(type);
+      state.call.localStream = stream;
+
+      stream.getTracks().forEach(track => {
+        state.pc.addTrack(track, stream);
+      });
+
+      localVideo.srcObject = stream;
+      if (type === 'video') localVideoWrap.classList.add('active');
+
+      // set remote offer
+      await state.pc.setRemoteDescription(new RTCSessionDescription(offer.sdp));
+      flushPendingCandidates();
+
+      // create answer
+      const answer = await state.pc.createAnswer();
+      await state.pc.setLocalDescription(answer);
+
+      // wait ICE
+      const local = await waitIce(state.pc, 3000);
+
+      state.dc.send(JSON.stringify({
+        type: 'call-answer',
+        sdp: { sdp: local.sdp, type: local.type },
+      }));
+
+      // UI
+      state.call.active = true;
+      state.call.type = type;
+      state.call.muted = false;
+      state.call.camOff = false;
+      callPeerName.textContent = state.peerName;
+      callPeerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
+      callTitleText.textContent = type === 'video' ? 'Video call' : 'Audio call';
+      remotePlaceholder.style.display = 'flex';
+      remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+      callOverlay.classList.add('active');
+      btnMute.classList.remove('muted');
+      btnCam.classList.toggle('cam-off', type === 'audio');
+      startCallTimer();
+      addSystemMessage('📞 Call accepted.');
+    } catch (err) {
+      console.error('acceptIncomingCall failed', err);
+      addSystemMessage('⚠️ Could not access media: ' + err.message);
+      state.dc.send(JSON.stringify({ type: 'call-end' }));
+      cleanupCall();
+    }
+  }
+
+  function declineIncomingCall() {
+    incomingCall.classList.remove('active');
+    state.call.pendingOffer = null;
+    if (state.dc && state.dc.readyState === 'open') {
+      state.dc.send(JSON.stringify({ type: 'call-decline' }));
+    }
+    addSystemMessage('📞 Call declined.');
+  }
+
+  function startCallTimer() {
+    state.call.startTime = Date.now();
+    clearInterval(state.call.timerInterval);
+    state.call.timerInterval = setInterval(() => {
+      const s = Math.floor((Date.now() - state.call.startTime) / 1000);
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      callTimer.textContent = `${mm}:${ss}`;
+    }, 500);
+  }
+
+  function toggleMute() {
+    if (!state.call.localStream) return;
+    const audioTrack = state.call.localStream.getAudioTracks()[0];
+    if (!audioTrack) return;
+    audioTrack.enabled = !audioTrack.enabled;
+    state.call.muted = !audioTrack.enabled;
+    btnMute.classList.toggle('muted', state.call.muted);
+    btnMute.innerHTML = state.call.muted
+      ? '<i class="fas fa-microphone-slash"></i>'
+      : '<i class="fas fa-microphone"></i>';
+    // notify peer
+    if (state.dc && state.dc.readyState === 'open') {
+      state.dc.send(JSON.stringify({ type: 'call-media-state', muted: state.call.muted }));
+    }
+  }
+
+  function toggleCam() {
+    if (!state.call.localStream) return;
+    const videoTrack = state.call.localStream.getVideoTracks()[0];
+    if (!videoTrack) {
+      // no camera — try to add one
+      navigator.mediaDevices.getUserMedia({ video: true }).then(s => {
+        const vt = s.getVideoTracks()[0];
+        state.call.localStream.addTrack(vt);
+        if (state.pc) state.pc.addTrack(vt, state.call.localStream);
+        localVideo.srcObject = state.call.localStream;
+        localVideoWrap.classList.add('active');
+        state.call.camOff = false;
+        btnCam.classList.remove('cam-off');
+        btnCam.innerHTML = '<i class="fas fa-video"></i>';
+      }).catch(e => addSystemMessage('⚠️ Could not enable camera: ' + e.message));
+      return;
+    }
+    videoTrack.enabled = !videoTrack.enabled;
+    state.call.camOff = !videoTrack.enabled;
+    btnCam.classList.toggle('cam-off', state.call.camOff);
+    btnCam.innerHTML = state.call.camOff
+      ? '<i class="fas fa-video-slash"></i>'
+      : '<i class="fas fa-video"></i>';
+    localVideoWrap.classList.toggle('active', !state.call.camOff);
+    if (state.dc && state.dc.readyState === 'open') {
+      state.dc.send(JSON.stringify({ type: 'call-media-state', camOff: state.call.camOff }));
+    }
+  }
+
+  function endCall(notifyPeer = true) {
+    if (!state.call.active) return;
+
+    if (notifyPeer && state.dc && state.dc.readyState === 'open') {
+      state.dc.send(JSON.stringify({ type: 'call-end' }));
+    }
+
+    // stop local tracks
+    if (state.call.localStream) {
+      state.call.localStream.getTracks().forEach(t => t.stop());
+      state.call.localStream = null;
+    }
+
+    // remove tracks from PC
+    if (state.pc) {
+      try {
+        state.pc.getSenders().forEach(sender => {
+          if (sender.track) {
+            try { state.pc.removeTrack(sender); } catch(e){}
+          }
+        });
+      } catch(e){}
+    }
+
+    // reset video elements
+    remoteVideo.srcObject = null;
+    localVideo.srcObject = null;
+    localVideoWrap.classList.remove('active');
+    remotePlaceholder.style.display = 'flex';
+    remoteVideo.style.display = 'block';
+
+    clearInterval(state.call.timerInterval);
+    callTimer.textContent = '00:00';
+
+    callOverlay.classList.remove('active');
+    incomingCall.classList.remove('active');
+
+    state.call.active = false;
+    state.call.type = null;
+    state.call.remoteStream = null;
+    state.call.muted = false;
+    state.call.camOff = false;
+    btnMute.classList.remove('muted');
+    btnCam.classList.remove('cam-off');
+    btnMute.innerHTML = '<i class="fas fa-microphone"></i>';
+    btnCam.innerHTML = '<i class="fas fa-video"></i>';
+
+    addSystemMessage('📞 Call ended.');
+  }
+
+  function cleanupCall() {
+    if (state.call.localStream) {
+      state.call.localStream.getTracks().forEach(t => t.stop());
+      state.call.localStream = null;
+    }
+    state.call.active = false;
+    state.call.type = null;
+    state.call.pendingOffer = null;
+    callOverlay.classList.remove('active');
+    incomingCall.classList.remove('active');
+    remoteVideo.srcObject = null;
+    localVideo.srcObject = null;
+    localVideoWrap.classList.remove('active');
+    clearInterval(state.call.timerInterval);
+  }
+
+  // ==================== EVENT BINDINGS ====================
   $('btnCreate').addEventListener('click', async () => {
     if (!$('myNameInput').value.trim()) { $('myNameInput').focus(); return; }
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -904,14 +1501,26 @@
   });
 
   sendBtn.addEventListener('click', sendChatMessage);
-
   msgInput.addEventListener('input', () => {
     if (msgInput.value.trim().length > 0) sendTypingSignal();
     else sendTypingStop();
   });
-
   msgInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); sendChatMessage(); }
+  });
+
+  // Call buttons
+  btnAudioCall.addEventListener('click', () => startCall('audio'));
+  btnVideoCall.addEventListener('click', () => startCall('video'));
+  btnEndCall.addEventListener('click', () => endCall(true));
+  btnMute.addEventListener('click', toggleMute);
+  btnCam.addEventListener('click', toggleCam);
+  btnAccept.addEventListener('click', acceptIncomingCall);
+  btnDecline.addEventListener('click', declineIncomingCall);
+
+  // Cleanup on tab close
+  window.addEventListener('beforeunload', () => {
+    if (state.call.active) endCall(true);
   });
 
   window.__state = state;
