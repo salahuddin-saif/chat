@@ -140,7 +140,7 @@
     border: 1px solid #1e283c; max-width: 90%; text-align: center;
   }
 
-  /* ======= TYPING INDICATOR (in chat) ======= */
+  /* ======= TYPING INDICATOR ======= */
   .typing-bubble {
     display: flex; align-items: center; gap: 4px;
     padding: 12px 18px;
@@ -162,65 +162,71 @@
     30% { transform: translateY(-5px); opacity: 1; background: #5b8cff; }
   }
 
-  /* ======= DECRYPTION ANIMATION ======= */
+  /* ======= DECRYPTION BUBBLE (character scramble) ======= */
   .decrypt-bubble {
     padding: 12px 16px;
-    background: #1e2638;
+    background: #1a2135;
     border-radius: 20px; border-bottom-left-radius: 5px;
-    border: 1px solid rgba(42,75,255,0.3);
+    border: 1px solid rgba(42,75,255,0.35);
     font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-    font-size: 0.78rem;
-    color: #5b8cff;
-    letter-spacing: 0.05em;
-    display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 0 20px rgba(42,75,255,0.15);
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    box-shadow: 0 0 24px rgba(42,75,255,0.18);
     position: relative;
     overflow: hidden;
+    min-width: 80px;
+    color: #5b8cff;
+    line-height: 1.5;
+    word-break: break-word;
   }
   .decrypt-bubble::before {
     content: '';
     position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(42,75,255,0.15), transparent);
-    animation: decryptSweep 1.2s infinite;
+    background: linear-gradient(90deg, transparent, rgba(42,75,255,0.18), transparent);
+    animation: decryptSweep 1.4s infinite;
+    pointer-events: none;
   }
   @keyframes decryptSweep {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
-  .decrypt-bubble i {
-    animation: decryptSpin 1s linear infinite;
-    font-size: 0.9rem;
-  }
-  @keyframes decryptSpin { to { transform: rotate(360deg); } }
-  .decrypt-text {
-    position: relative; z-index: 1;
-    background: linear-gradient(90deg, #5b8cff, #7b3aff, #5b8cff);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shimmer 1.5s linear infinite;
-  }
-  @keyframes shimmer { to { background-position: 200% center; } }
-
-  /* Glitch reveal for final message */
-  .msg.decrypting .bubble {
-    animation: glitchIn .6s steps(3) forwards;
-  }
-  @keyframes glitchIn {
-    0% { filter: blur(4px); opacity: 0; transform: scale(.95); }
-    40% { filter: blur(1px); opacity: .8; transform: scale(1.01); }
-    100% { filter: blur(0); opacity: 1; transform: scale(1); }
-  }
-  .msg.in .bubble .reveal-char {
+  .decrypt-bubble .char {
     display: inline-block;
-    opacity: 0;
-    animation: charIn .3s forwards;
+    position: relative;
+    z-index: 1;
+    min-width: 0.4em;
+    text-align: center;
+    transition: color .12s;
   }
-  @keyframes charIn {
-    from { opacity: 0; transform: translateY(-3px); filter: blur(2px); }
-    to { opacity: 1; transform: none; filter: none; }
+  .decrypt-bubble .char.scrambled {
+    color: #4a6aff;
+    opacity: 0.85;
+    text-shadow: 0 0 6px rgba(91,140,255,0.6);
   }
+  .decrypt-bubble .char.revealed {
+    color: #eef3fc;
+    text-shadow: 0 0 4px rgba(46,204,113,0.4);
+    animation: revealPop .25s ease-out;
+  }
+  .decrypt-bubble .char.locked {
+    color: #7b3aff;
+    opacity: 0.5;
+  }
+  @keyframes revealPop {
+    0% { transform: scale(1.4); color: #2ecc71; text-shadow: 0 0 12px #2ecc71; }
+    100% { transform: scale(1); color: #eef3fc; text-shadow: 0 0 4px rgba(46,204,113,0.4); }
+  }
+  .decrypt-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: #2ecc71;
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink .5s steps(1) infinite;
+    box-shadow: 0 0 6px #2ecc71;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
 
   .input-bar {
     padding: 12px 16px 16px; background: #101726;
@@ -387,6 +393,7 @@
     typingTimeout: null,
     isTypingSent: false,
     typingIndicatorEl: null,
+    decryptAnimating: false,
   };
 
   // ---------------- Crypto ----------------
@@ -469,9 +476,9 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // ---------------- Typing Indicator (incoming) ----------------
+  // ---------------- Typing Indicator ----------------
   function showTypingIndicator() {
-    if (state.typingIndicatorEl) return; // already shown
+    if (state.typingIndicatorEl) return;
     removeTypingIndicator();
     const div = document.createElement('div');
     div.className = 'msg in';
@@ -493,61 +500,141 @@
     }
   }
 
-  // ---------------- Decryption Animation ----------------
-  function showDecryptionAnimation(onComplete) {
-    const div = document.createElement('div');
-    div.className = 'msg in';
+  // ---------------- Character-by-Character Decryption Animation ----------------
+  // Characters used for scrambling (looks "encrypted")
+  const SCRAMBLE_CHARS = 'ABCDEFabcdef0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~`ΣΠΩΔ¥£€§±∞█▓▒░◆◇■□●○';
+
+  function scrambleChar() {
+    return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+  }
+
+  /**
+   * Play a character-by-character "decryption" animation.
+   * Each character starts scrambled and progressively locks into the real char.
+   * The reveal happens left-to-right with a small overlap for a "cascade" feel.
+   */
+  function playDecryptAnimation(plaintext, onComplete) {
+    // Create message bubble
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'msg in';
+
     const bubble = document.createElement('div');
     bubble.className = 'decrypt-bubble';
-    bubble.innerHTML = `
-      <i class="fas fa-lock-open"></i>
-      <span class="decrypt-text">Decrypting…</span>
-    `;
-    div.appendChild(bubble);
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
 
-    // After animation, remove and show actual message with glitch reveal
-    setTimeout(() => {
-      div.remove();
-      if (onComplete) onComplete();
-    }, 700);
-  }
+    // Build character spans
+    const chars = Array.from(plaintext);
+    const charEls = [];
 
-  // ---------------- Message with char reveal ----------------
-  function addDecryptedMessage(text, dir) {
-    const div = document.createElement('div');
-    div.className = `msg ${dir} decrypting`;
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-
-    const textSpan = document.createElement('span');
-    // Character reveal
-    Array.from(text).forEach((ch, i) => {
-      const s = document.createElement('span');
-      s.className = 'reveal-char';
-      s.textContent = ch;
-      s.style.animationDelay = `${Math.min(i * 12, 600)}ms`;
-      textSpan.appendChild(s);
+    chars.forEach((ch) => {
+      const span = document.createElement('span');
+      span.className = 'char locked';
+      // Locked state = fully scrambled
+      span.textContent = ch === ' ' ? ' ' : scrambleChar();
+      if (ch === ' ') span.style.minWidth = '0.3em';
+      bubble.appendChild(span);
+      charEls.push({ el: span, real: ch, revealed: false });
     });
-    bubble.appendChild(textSpan);
 
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    meta.innerHTML = `<i class="fas fa-lock"></i> ${now}`;
-    bubble.appendChild(meta);
+    // Cursor
+    const cursor = document.createElement('span');
+    cursor.className = 'decrypt-cursor';
+    bubble.appendChild(cursor);
 
-    div.appendChild(bubble);
-    messagesEl.appendChild(div);
+    msgDiv.appendChild(bubble);
+    messagesEl.appendChild(msgDiv);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    // ---- Animation loop ----
+    // Each character has a target "reveal time". They reveal left-to-right.
+    const totalChars = chars.length;
+    // Stagger: reveal one char every N ms. Faster for long messages.
+    const staggerMs = totalChars > 60 ? 18 : totalChars > 30 ? 30 : 45;
+    // Before a char reveals, it will flicker random chars a few times.
+    const flickerInterval = 55; // ms between random flashes
+
+    // Initialize "revealAt" times
+    const startTime = performance.now();
+    let revealIndex = 0;
+    let lastFlickerTime = 0;
+    let finished = false;
+
+    function flickerAll() {
+      // Update every not-yet-revealed char to a new random char
+      for (let i = 0; i < charEls.length; i++) {
+        const c = charEls[i];
+        if (c.revealed) continue;
+        if (c.real === ' ') continue; // keep spaces
+        c.el.textContent = scrambleChar();
+      }
+    }
+
+    function revealChar(index) {
+      const c = charEls[index];
+      if (!c || c.revealed) return;
+      c.revealed = true;
+      c.el.textContent = c.real === ' ' ? ' ' : c.real;
+      c.el.classList.remove('locked', 'scrambled');
+      c.el.classList.add('revealed');
+    }
+
+    function tick(now) {
+      if (finished) return;
+
+      // Flicker unrevealed chars at a steady rate
+      if (now - lastFlickerTime > flickerInterval) {
+        flickerAll();
+        lastFlickerTime = now;
+      }
+
+      // Reveal characters whose time has come
+      while (revealIndex < totalChars) {
+        const targetRevealTime = startTime + (revealIndex * staggerMs);
+        if (now >= targetRevealTime) {
+          revealChar(revealIndex);
+          revealIndex++;
+        } else {
+          break;
+        }
+      }
+
+      // Move cursor to just after last revealed char
+      const revealedCount = revealIndex;
+      if (revealedCount < totalChars) {
+        // Insert cursor after the last revealed char (or at start if none)
+        const anchor = charEls[Math.max(0, revealedCount - 1)];
+        if (anchor && anchor.el.nextSibling !== cursor) {
+          anchor.el.parentNode.insertBefore(cursor, anchor.el.nextSibling);
+        }
+      } else {
+        // All revealed – move cursor to end
+        bubble.appendChild(cursor);
+      }
+
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      if (revealIndex >= totalChars) {
+        // Done revealing – brief pause then remove cursor and finalize
+        finished = true;
+        setTimeout(() => {
+          cursor.remove();
+          // Convert to normal message bubble
+          msgDiv.remove();
+          addMessage(plaintext, 'in');
+          if (onComplete) onComplete();
+        }, 300);
+        return;
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
   }
 
-  // ---------------- Send typing signal (debounced) ----------------
+  // ---------------- Send typing signal ----------------
   function sendTypingSignal() {
     if (!state.dc || state.dc.readyState !== 'open') return;
     if (state.isTypingSent) {
-      // reset debounce timer
       clearTimeout(state.typingTimeout);
     } else {
       state.isTypingSent = true;
@@ -622,15 +709,10 @@
             addSystemMessage('⚠️ Key exchange failed.');
           }
         } else if (msg.type === 'typing') {
-          if (msg.state === 'start') {
-            showTypingIndicator();
-          } else {
-            removeTypingIndicator();
-          }
+          if (msg.state === 'start') showTypingIndicator();
+          else removeTypingIndicator();
         } else if (msg.type === 'chat') {
-          // Received a message → remove typing indicator, show decryption animation, then message
           removeTypingIndicator();
-          // Decrypt first
           let plain;
           try {
             plain = await decryptText(msg.body);
@@ -638,9 +720,9 @@
             console.error('Decrypt failed', err);
             plain = '⚠️ [Unable to decrypt message]';
           }
-          // Show decrypt animation, then reveal message
-          showDecryptionAnimation(() => {
-            addDecryptedMessage(plain, 'in');
+          // Play character-by-character decryption animation
+          playDecryptAnimation(plain, () => {
+            // done — nothing extra needed
           });
         }
       } catch (err) { console.error('Bad message', err); }
@@ -823,13 +905,9 @@
 
   sendBtn.addEventListener('click', sendChatMessage);
 
-  // Typing detection on input
   msgInput.addEventListener('input', () => {
-    if (msgInput.value.trim().length > 0) {
-      sendTypingSignal();
-    } else {
-      sendTypingStop();
-    }
+    if (msgInput.value.trim().length > 0) sendTypingSignal();
+    else sendTypingStop();
   });
 
   msgInput.addEventListener('keydown', (e) => {
