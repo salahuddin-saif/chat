@@ -28,7 +28,6 @@
     height: 94dvh;
   }
 
-  /* Session banner */
   .session-banner {
     position: absolute; top: 0; left: 0; right: 0; z-index: 55;
     background: linear-gradient(90deg, #1f8b4c, #2ecc71);
@@ -40,7 +39,6 @@
   @keyframes slideDown { from { transform: translateY(-100%); } to { transform: none; } }
   .session-banner i { font-size: 0.75rem; }
 
-  /* Connect screen */
   .connect-screen {
     position: absolute; inset: 0; z-index: 50;
     background: linear-gradient(160deg, #0d1424 0%, #0a0f1c 100%);
@@ -83,7 +81,7 @@
     transition: all .15s; width: 100%;
   }
   .btn-primary { background: linear-gradient(135deg,#2a4bff,#1f3ee6); color: white; box-shadow: 0 10px 26px -8px #2a4bffa0; }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 30px -8px #2a4bffc0; }
+  .btn-primary:hover { transform: translateY(-1px); }
   .btn-primary:active { transform: translateY(0); }
   .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
   .btn-ghost { background: #1a2236; color: #b9c6e4; border: 1px solid #2b3852; }
@@ -103,7 +101,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Resume session card */
   .resume-card {
     background: #101726; border: 1px solid #1e283c; border-radius: 20px;
     padding: 20px; margin-bottom: 20px; text-align: center;
@@ -118,7 +115,6 @@
   .resume-card .resume-countdown.warn { color: #f5a623; }
   .resume-card .resume-countdown.danger { color: #e74c3c; }
 
-  /* Chat header */
   .chat-header {
     padding: 14px 20px; background: #101726;
     border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -155,7 +151,6 @@
   .header-btn:hover { background: #222d45; color: white; border-color: #3b4866; }
   .header-btn:disabled { opacity: .35; cursor: not-allowed; }
 
-  /* Call overlay */
   .call-overlay {
     position: absolute; inset: 0; z-index: 40;
     background: radial-gradient(circle at 30% 30%, #1a2440 0%, #080b14 90%);
@@ -164,10 +159,7 @@
     transition: opacity .3s, visibility .3s;
   }
   .call-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
-  .call-top {
-    padding: 16px 22px; display: flex; align-items: center;
-    justify-content: space-between; flex-shrink: 0;
-  }
+  .call-top { padding: 16px 22px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .call-title { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; color: #b9c6e4; }
   .call-title .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; box-shadow: 0 0 8px #e74c3c; animation: pulse 1.2s infinite; }
   .call-timer { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.85rem; color: #b9c6e4; background: #0e1421; padding: 6px 14px; border-radius: 100px; border: 1px solid #1e283c; }
@@ -266,7 +258,6 @@
   .incoming-card .call-type i { color: #2ecc71; }
   .incoming-actions { display: flex; gap: 16px; justify-content: center; }
 
-  /* Messages */
   .messages {
     flex: 1; overflow-y: auto; padding: 22px 20px;
     display: flex; flex-direction: column; gap: 10px;
@@ -350,7 +341,6 @@
   }
   @keyframes blink { 50% { opacity: 0; } }
 
-  /* Input bar */
   .input-bar {
     padding: 12px 16px 16px; background: #101726;
     border-top: 1px solid rgba(255,255,255,0.05);
@@ -399,13 +389,11 @@
 </head>
 <body>
 <div class="app" id="app">
-  <!-- Session restored banner -->
   <div class="session-banner" id="sessionBanner" style="display:none">
     <i class="fas fa-history"></i>
     <span>Session restored — <span id="bannerCountdown">5:00</span> until expiry</span>
   </div>
 
-  <!-- Connect screen -->
   <div class="connect-screen" id="connectScreen">
     <div class="connect-card">
       <div class="brand">
@@ -414,7 +402,7 @@
       </div>
       <p class="brand-sub">Peer-to-peer chat · audio · video · all E2E encrypted</p>
 
-      <!-- Step 0: resume session (only shows if saved session exists) -->
+      <!-- Resume step -->
       <div class="step" id="stepResume">
         <div class="resume-card">
           <div class="resume-title">Welcome back!</div>
@@ -429,7 +417,7 @@
         </div>
       </div>
 
-      <!-- Step 1: role -->
+      <!-- Role -->
       <div class="step" id="stepRole">
         <div class="step-title">Get started</div>
         <p class="help-text">
@@ -491,7 +479,6 @@
     </div>
   </div>
 
-  <!-- Chat header -->
   <header class="chat-header">
     <div class="peer-info">
       <div class="peer-avatar" id="peerAvatar">?</div>
@@ -525,7 +512,6 @@
     <span id="encFooterText">End-to-end encrypted · messages, audio & video protected</span>
   </div>
 
-  <!-- Call overlay -->
   <div class="call-overlay" id="callOverlay">
     <div class="call-top">
       <div class="call-title">
@@ -555,7 +541,6 @@
     </div>
   </div>
 
-  <!-- Incoming call -->
   <div class="incoming-call" id="incomingCall">
     <div class="incoming-card">
       <div class="avatar-big" id="incomingAvatar">?</div>
@@ -610,128 +595,91 @@
   const btnAccept = $('btnAccept');
   const btnDecline = $('btnDecline');
 
-  // ==================== SESSION PERSISTENCE ====================
-  // localStorage keys
-  const STORAGE = {
-    SESSION: 'securechat_session_v1',       // handshake state, keys, messages
-    SETTINGS: 'securechat_settings_v1',      // my name etc
-  };
-  // Session expires after 5 minutes of inactivity
+  // ==================== STORAGE ====================
+  const STORAGE_KEY = 'securechat_session_v2';
   const SESSION_TTL_MS = 5 * 60 * 1000;
-  // localStorage write throttle
   let lastSaveTs = 0;
 
   function saveSession(force = false) {
     const now = Date.now();
-    if (!force && now - lastSaveTs < 300) return; // throttle
+    if (!force && now - lastSaveTs < 400) return;
     lastSaveTs = now;
     try {
       const session = {
-        version: 1,
+        version: 2,
         savedAt: now,
-        // Names
         myName: state.myName,
         peerName: state.peerName,
-        // Handshake data
         isCreator: state.isCreator,
         myKeyPairJwk: state.myKeyPairJwk,
         sharedKeyJwk: state.sharedKeyJwk,
-        // Messages (encrypted for storage with a derived key? For simplicity here store plaintext since it's the user's device)
-        messages: state.messageHistory.slice(-500), // last 500
-        // Session flags
-        keyExchanged: !!state.sharedKeyJwk,
-        // The peer's public key (so we know the connection state)
         peerPublicKeyJwk: state.peerPublicKeyJwk,
+        keyExchanged: !!state.sharedKeyJwk,
+        messages: state.messageHistory.slice(-500),
+        // Remember which handshake step we were on, so we can resume it
+        handshakeStep: state.handshakeStep || null,
+        pendingOfferCode: state.pendingOfferCode || '',
+        pendingAnswerCode: state.pendingAnswerCode || '',
       };
-      localStorage.setItem(STORAGE.SESSION, JSON.stringify(session));
-    } catch (e) {
-      console.warn('saveSession failed', e);
-    }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } catch (e) { console.warn('saveSession failed', e); }
   }
 
   function loadSession() {
     try {
-      const raw = localStorage.getItem(STORAGE.SESSION);
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw);
-      if (s.version !== 1) return null;
-      // check TTL
+      if (s.version !== 2) return null;
       const age = Date.now() - s.savedAt;
-      if (age > SESSION_TTL_MS) {
-        localStorage.removeItem(STORAGE.SESSION);
-        return null;
-      }
+      if (age > SESSION_TTL_MS) { localStorage.removeItem(STORAGE_KEY); return null; }
       return s;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
   function clearSession() {
-    try {
-      localStorage.removeItem(STORAGE.SESSION);
-    } catch (e) {}
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }
 
   function touchSession() {
-    // update savedAt to now (extend TTL) — throttled
     try {
-      const raw = localStorage.getItem(STORAGE.SESSION);
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const s = JSON.parse(raw);
       s.savedAt = Date.now();
-      localStorage.setItem(STORAGE.SESSION, JSON.stringify(s));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
     } catch (e) {}
   }
 
-  // Activity tracking — any interaction extends the TTL
-  let lastActivity = Date.now();
-  function markActivity() {
-    lastActivity = Date.now();
-    touchSession();
-  }
-  ['click', 'keydown', 'touchstart', 'mousemove', 'scroll'].forEach(evt => {
-    document.addEventListener(evt, markActivity, { passive: true, capture: true });
-  });
-
   // ==================== STATE ====================
   const state = {
-    myName: '',
-    peerName: 'Friend',
-    pc: null,
-    dc: null,
-    isCreator: false,
-    myKeyPair: null,
-    myKeyPairJwk: null,
-    sharedKey: null,
-    sharedKeyJwk: null,
+    myName: '', peerName: 'Friend',
+    pc: null, dc: null, isCreator: false,
+    myKeyPair: null, myKeyPairJwk: null,
+    sharedKey: null, sharedKeyJwk: null,
     peerPublicKeyJwk: null,
     keySent: false,
-    typingTimeout: null,
-    isTypingSent: false,
-    typingIndicatorEl: null,
-    messageHistory: [],       // [{text, dir, ts}]
+    typingTimeout: null, isTypingSent: false, typingIndicatorEl: null,
+    messageHistory: [],
+    handshakeStep: null,    // 'offer' | 'answer' | 'paste-offer' | 'reply' | null
+    pendingOfferCode: '', pendingAnswerCode: '',
     call: {
       active: false, type: null, incoming: false,
       localStream: null, remoteStream: null,
       timerInterval: null, startTime: 0,
       pendingOffer: null, muted: false, camOff: false,
     },
-    makingOffer: false,
-    ignoreOffer: false,
   };
 
-  // ==================== MOBILE KEYBOARD FIX ====================
+  // ==================== MOBILE KEYBOARD ====================
   function setupKeyboardHandling() {
     if (!window.visualViewport) return;
     const handleResize = () => {
       const vv = window.visualViewport;
-      const layoutHeight = window.innerHeight;
-      const viewportHeight = vv.height;
-      const keyboardOpen = layoutHeight - viewportHeight > 120;
+      const keyboardOpen = window.innerHeight - vv.height > 120;
       if (keyboardOpen) {
-        appEl.style.height = viewportHeight + 'px';
-        appEl.style.maxHeight = viewportHeight + 'px';
+        appEl.style.height = vv.height + 'px';
+        appEl.style.maxHeight = vv.height + 'px';
         appEl.style.position = 'fixed';
         appEl.style.top = vv.offsetTop + 'px';
         appEl.style.left = '0';
@@ -784,33 +732,32 @@
     const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, state.sharedKey, data);
     return dec.decode(pt);
   }
-
-  // Export/import keypair as JWK for persistence
   async function exportKeyPairJwk(kp) {
-    const priv = await crypto.subtle.exportKey('jwk', kp.privateKey);
-    const pub = await crypto.subtle.exportKey('jwk', kp.publicKey);
-    return { privateKey: priv, publicKey: pub };
+    return {
+      privateKey: await crypto.subtle.exportKey('jwk', kp.privateKey),
+      publicKey: await crypto.subtle.exportKey('jwk', kp.publicKey),
+    };
   }
   async function importKeyPairJwk(jwk) {
-    const priv = await crypto.subtle.importKey('jwk', jwk.privateKey, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey', 'deriveBits']);
-    const pub = await crypto.subtle.importKey('jwk', jwk.publicKey, { name: 'ECDH', namedCurve: 'P-256' }, true, []);
-    return { privateKey: priv, publicKey: pub };
+    return {
+      privateKey: await crypto.subtle.importKey('jwk', jwk.privateKey, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey', 'deriveBits']),
+      publicKey: await crypto.subtle.importKey('jwk', jwk.publicKey, { name: 'ECDH', namedCurve: 'P-256' }, true, []),
+    };
   }
+  // Make AES key extractable so we can save it
   async function exportSharedKeyJwk(key) {
-    try {
-      return await crypto.subtle.exportKey('jwk', key);
-    } catch (e) {
-      return null; // non-extractable
-    }
+    try { return await crypto.subtle.exportKey('jwk', key); }
+    catch (e) { return null; }
   }
   async function importSharedKeyJwk(jwk) {
-    return crypto.subtle.importKey('jwk', jwk, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return crypto.subtle.importKey('jwk', jwk, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
   }
 
   // ==================== UI HELPERS ====================
   function showStep(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-    $(id).classList.add('active');
+    const el = $(id);
+    if (el) el.classList.add('active');
   }
   function hideConnectScreen() { connectScreen.classList.add('hidden'); }
   function showConnectScreen() { connectScreen.classList.remove('hidden'); }
@@ -830,9 +777,7 @@
   }
 
   function scrollToBottom() {
-    requestAnimationFrame(() => {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    });
+    requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
   }
 
   function addSystemMessage(text) {
@@ -860,7 +805,6 @@
     messagesEl.appendChild(div);
     scrollToBottom();
 
-    // record in history
     if (!opts.skipHistory) {
       state.messageHistory.push({ text, dir, ts });
       if (state.messageHistory.length > 500) state.messageHistory.shift();
@@ -970,10 +914,8 @@
       }
       while (revealIndex < totalChars) {
         const targetRevealTime = startTime + (revealIndex * staggerMs);
-        if (now >= targetRevealTime) {
-          revealChar(revealIndex);
-          revealIndex++;
-        } else break;
+        if (now >= targetRevealTime) { revealChar(revealIndex); revealIndex++; }
+        else break;
       }
       const revealedCount = revealIndex;
       if (revealedCount < totalChars) {
@@ -981,9 +923,7 @@
         if (anchor && anchor.el.nextSibling !== cursor) {
           anchor.el.parentNode.insertBefore(cursor, anchor.el.nextSibling);
         }
-      } else {
-        bubble.appendChild(cursor);
-      }
+      } else { bubble.appendChild(cursor); }
       scrollToBottom();
       if (revealIndex >= totalChars) {
         finished = true;
@@ -1000,9 +940,9 @@
     requestAnimationFrame(tick);
   }
 
-  // ==================== ENABLE CHAT ====================
+  // ==================== ENABLE / DISABLE CHAT ====================
   function enableChat(peerName, opts = {}) {
-    state.peerName = peerName || 'Friend';
+    state.peerName = peerName || state.peerName || 'Friend';
     peerNameEl.textContent = state.peerName;
     peerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
     updatePeerStatus(true);
@@ -1011,7 +951,6 @@
     sendBtn.disabled = false;
     btnAudioCall.disabled = false;
     btnVideoCall.disabled = false;
-    msgInput.focus({ preventScroll: true });
     if (!opts.silent) {
       addSystemMessage('Secure channel established. You can chat, call, or video call.');
     }
@@ -1030,10 +969,9 @@
   function setupDataChannel(dc) {
     state.dc = dc;
     dc.onopen = async () => {
-      console.log('[DC] open');
       try { dc.send(JSON.stringify({ type: 'hello', name: state.myName || 'Anonymous' })); } catch(e){}
       await sendKeyMessage();
-      enableChat('Friend');
+      enableChat(state.peerName);
     };
     dc.onclose = () => {
       updatePeerStatus(false);
@@ -1051,7 +989,6 @@
   }
 
   async function handleMessage(msg) {
-    markActivity();
     switch (msg.type) {
       case 'hello':
         state.peerName = msg.name || 'Friend';
@@ -1069,9 +1006,7 @@
           encFooterText.textContent = 'End-to-end encrypted · messages, audio & video protected';
           addSystemMessage('🔐 Encryption keys exchanged. You can chat, call, or video call.');
           saveSession(true);
-        } catch (err) {
-          console.error('Key derivation failed', err);
-        }
+        } catch (err) { console.error('Key derivation failed', err); }
         break;
       case 'typing':
         if (msg.state === 'start') showTypingIndicator();
@@ -1094,10 +1029,7 @@
         try {
           await state.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
           startCallTimer();
-        } catch (e) {
-          console.error('setRemoteDescription (answer) failed', e);
-          endCall(false);
-        }
+        } catch (e) { endCall(false); }
         break;
       case 'call-decline':
         addSystemMessage('📞 Call declined.');
@@ -1114,7 +1046,7 @@
       case 'call-ice':
         if (!state.pc) break;
         try { await state.pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); }
-        catch (e) { if (!state.ignoreOffer) console.error('addIceCandidate failed', e); }
+        catch (e) {}
         break;
     }
   }
@@ -1142,12 +1074,8 @@
     const pc = new RTCPeerConnection(ICE);
     state.pc = pc;
     pc.oniceconnectionstatechange = () => {
-      console.log('[ICE]', pc.iceConnectionState);
-      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        updatePeerStatus(true);
-      } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-        updatePeerStatus(false);
-      }
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') updatePeerStatus(true);
+      else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') updatePeerStatus(false);
     };
     pc.onicecandidate = (event) => {
       if (event.candidate && state.dc && state.dc.readyState === 'open' && state.call.active) {
@@ -1181,7 +1109,6 @@
     state.myName = $('myNameInput').value.trim() || 'Anonymous';
     state.myKeyPair = await generateKeyPair();
     state.myKeyPairJwk = await exportKeyPairJwk(state.myKeyPair);
-
     const pc = createPC();
     const dc = pc.createDataChannel('chat', { ordered: true });
     setupDataChannel(dc);
@@ -1190,7 +1117,10 @@
     setStatus('offerStatus', '<div class="spinner"></div> Gathering network info…');
     const local = await waitIce(pc);
     const payload = { sdp: local.sdp, type: local.type };
-    $('offerBox').value = btoa(JSON.stringify(payload));
+    const code = btoa(JSON.stringify(payload));
+    $('offerBox').value = code;
+    state.pendingOfferCode = code;
+    state.handshakeStep = 'answer'; // creator's next step is to paste answer
     setStatus('offerStatus', '');
     showStep('stepOffer');
     saveSession(true);
@@ -1204,6 +1134,7 @@
     catch (e) { setStatus('answerStatus', '<span style="color:#e74c3c">Invalid code.</span>'); return; }
     try {
       await state.pc.setRemoteDescription(answer);
+      state.handshakeStep = null;
       setStatus('answerStatus', '<div class="spinner"></div> Connecting… (waiting for peer)');
       saveSession(true);
     } catch (e) {
@@ -1217,6 +1148,7 @@
     state.myKeyPair = await generateKeyPair();
     state.myKeyPairJwk = await exportKeyPairJwk(state.myKeyPair);
     createPC();
+    state.handshakeStep = 'paste-offer';
     showStep('stepPasteOffer');
     saveSession(true);
   }
@@ -1234,7 +1166,10 @@
       setStatus('pasteOfferStatus', '<div class="spinner"></div> Gathering network info…');
       const local = await waitIce(state.pc);
       const payload = { sdp: local.sdp, type: local.type };
-      $('replyBox').value = btoa(JSON.stringify(payload));
+      const replyCode = btoa(JSON.stringify(payload));
+      $('replyBox').value = replyCode;
+      state.pendingAnswerCode = replyCode;
+      state.handshakeStep = 'reply';
       setStatus('pasteOfferStatus', '<span style="color:#2ecc71">✓ Invite accepted</span>');
       showStep('stepReply');
       setStatus('replyStatus', '<div class="spinner"></div> Waiting for your friend to connect…');
@@ -1260,7 +1195,6 @@
       scrollToBottom();
       saveSession();
     } catch (e) {
-      console.error(e);
       addSystemMessage('⚠️ Failed to send message.');
     }
   }
@@ -1271,9 +1205,8 @@
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       video: type === 'video' ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } : false,
     };
-    try {
-      return await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (err) {
+    try { return await navigator.mediaDevices.getUserMedia(constraints); }
+    catch (err) {
       if (type === 'video') {
         try {
           addSystemMessage('⚠️ Camera not available — starting audio-only call.');
@@ -1325,7 +1258,6 @@
       state.dc.send(JSON.stringify({ type: 'call-offer', callType: actualType, sdp: { sdp: local.sdp, type: local.type }, name: state.myName }));
       addSystemMessage(`📞 Calling ${state.peerName} (${actualType})…`);
     } catch (err) {
-      console.error('startCall failed', err);
       addSystemMessage('⚠️ Could not start call: ' + err.message);
       cleanupCall();
     }
@@ -1385,7 +1317,6 @@
       startCallTimer();
       addSystemMessage('📞 Call accepted.');
     } catch (err) {
-      console.error('acceptIncomingCall failed', err);
       addSystemMessage('⚠️ Could not accept call: ' + err.message);
       state.dc.send(JSON.stringify({ type: 'call-end' }));
       cleanupCall();
@@ -1419,9 +1350,7 @@
     audioTrack.enabled = !audioTrack.enabled;
     state.call.muted = !audioTrack.enabled;
     btnMute.classList.toggle('muted', state.call.muted);
-    btnMute.innerHTML = state.call.muted
-      ? '<i class="fas fa-microphone-slash"></i>'
-      : '<i class="fas fa-microphone"></i>';
+    btnMute.innerHTML = state.call.muted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
   }
 
   async function toggleCam() {
@@ -1448,9 +1377,7 @@
     videoTrack.enabled = !videoTrack.enabled;
     state.call.camOff = !videoTrack.enabled;
     btnCam.classList.toggle('cam-off', state.call.camOff);
-    btnCam.innerHTML = state.call.camOff
-      ? '<i class="fas fa-video-slash"></i>'
-      : '<i class="fas fa-video"></i>';
+    btnCam.innerHTML = state.call.camOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
     localVideoWrap.classList.toggle('active', !state.call.camOff);
   }
 
@@ -1507,57 +1434,49 @@
     clearInterval(state.call.timerInterval);
   }
 
-  // ==================== RESUME SESSION LOGIC ====================
-  // When the page reloads, the RTCPeerConnection is gone (WebRTC is not persistent).
-  // We can't auto-reconnect without re-doing the handshake, BUT we can:
-  //  1. Restore the shared AES key (so decryption of future messages still works IF the peer reconnects)
-  //  2. Restore message history
-  //  3. Restore identity keys
-  // The user must re-do the WebRTC handshake to actually receive NEW messages.
-  // The saved shared key lets us at least READ old encrypted messages (if any were cached ciphertexts).
-
+  // ==================== RESTORE SESSION ====================
+  // This is the corrected function. Returns true if a session was restored.
   async function restoreSessionFromStorage() {
     const s = loadSession();
     if (!s) return false;
 
     try {
-      // Restore names
       state.myName = s.myName || '';
       state.peerName = s.peerName || 'Friend';
       state.isCreator = s.isCreator || false;
+      state.handshakeStep = s.handshakeStep || null;
+      state.pendingOfferCode = s.pendingOfferCode || '';
+      state.pendingAnswerCode = s.pendingAnswerCode || '';
 
-      // Restore keypair
       if (s.myKeyPairJwk) {
         state.myKeyPair = await importKeyPairJwk(s.myKeyPairJwk);
         state.myKeyPairJwk = s.myKeyPairJwk;
       }
-
-      // Restore shared key
       if (s.sharedKeyJwk) {
         try {
           state.sharedKey = await importSharedKeyJwk(s.sharedKeyJwk);
           state.sharedKeyJwk = s.sharedKeyJwk;
         } catch (e) { console.warn('shared key restore failed', e); }
       }
-
       if (s.peerPublicKeyJwk) state.peerPublicKeyJwk = s.peerPublicKeyJwk;
 
-      // Restore message history (render)
+      // Render messages into chat DOM
+      messagesEl.innerHTML = '';
       if (Array.isArray(s.messages) && s.messages.length > 0) {
-        state.messageHistory = s.messages;
-        // Render them
-        messagesEl.innerHTML = '';
+        state.messageHistory = s.messages.slice();
         s.messages.forEach(m => {
           if (m.dir === 'in' || m.dir === 'out') {
             addMessage(m.text, m.dir, { ts: m.ts, skipHistory: true });
           }
         });
+      } else {
+        state.messageHistory = [];
       }
 
-      // Show resume UI on connect screen
+      // Update header
       peerNameEl.textContent = state.peerName;
       peerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
-      updatePeerStatus(false); // not connected to WebRTC yet
+      updatePeerStatus(false);
 
       return true;
     } catch (e) {
@@ -1566,17 +1485,23 @@
     }
   }
 
+  // Show the resume card with countdown
+  let resumeCountdownInterval = null;
   function showResumeScreen() {
     showStep('stepResume');
-    // start countdown on resume card
     updateResumeCountdown();
+    clearInterval(resumeCountdownInterval);
+    resumeCountdownInterval = setInterval(updateResumeCountdown, 1000);
   }
-
-  let resumeCountdownInterval = null;
   function updateResumeCountdown() {
     const s = loadSession();
     const el = $('resumeCountdown');
-    if (!s || !el) return;
+    if (!el) return;
+    if (!s) {
+      clearInterval(resumeCountdownInterval);
+      showStep('stepRole');
+      return;
+    }
     const remaining = Math.max(0, SESSION_TTL_MS - (Date.now() - s.savedAt));
     const mm = String(Math.floor(remaining / 60000)).padStart(2, '0');
     const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
@@ -1591,24 +1516,48 @@
     }
   }
 
+  // CORRECTED: Actually resume the session into the chat UI
   function resumeSession() {
-    // restore into live chat UI
+    if (!state.myKeyPair) { showStep('stepRole'); return; }
+    // Hide connect screen → user sees their restored chat history
     hideConnectScreen();
-    // We don't have a live WebRTC connection, so disable chat input but show history
+    // Chat input is disabled because WebRTC is gone (needs new handshake)
     disableChat();
-    updatePeerStatus(false);
-    addSystemMessage('Session restored. You must re-connect to continue chatting.');
+    // Show resume banner with countdown
     showSessionBanner();
-    // prompt to recreate handshake
-    setTimeout(() => {
+    // If we were mid-handshake, jump back to that step
+    if (state.handshakeStep === 'reply') {
+      // We were the joiner waiting for creator. Restore reply box.
+      $('replyBox').value = state.pendingAnswerCode || '';
       showConnectScreen();
-      showStep('stepRole');
-      addSystemMessage('To chat again, create or join a new room.');
-    }, 800);
+      showStep('stepReply');
+      setStatus('replyStatus', '<div class="spinner"></div> Waiting for your friend to connect…');
+      addSystemMessage('Session restored — your reply code is ready. Send it to your friend.');
+    } else if (state.handshakeStep === 'answer') {
+      // We were the creator about to paste answer. Restore offer box.
+      $('offerBox').value = state.pendingOfferCode || '';
+      showConnectScreen();
+      showStep('stepOffer');
+      addSystemMessage('Session restored — your invite is ready. Share it and paste the reply.');
+    } else if (state.handshakeStep === 'paste-offer') {
+      showConnectScreen();
+      showStep('stepPasteOffer');
+      addSystemMessage('Session restored — paste your friend\'s invite to continue.');
+    } else {
+      // Session restored with messages but no pending handshake.
+      // Show history + prompt to reconnect.
+      addSystemMessage('Session restored. Re-connect to continue chatting.');
+      setTimeout(() => {
+        showConnectScreen();
+        showStep('stepRole');
+      }, 1200);
+    }
+    saveSession(true);
   }
 
   function discardSession() {
     clearSession();
+    clearInterval(resumeCountdownInterval);
     state.messageHistory = [];
     messagesEl.innerHTML = '';
     state.myKeyPair = null;
@@ -1617,52 +1566,64 @@
     state.myKeyPairJwk = null;
     state.peerPublicKeyJwk = null;
     state.keySent = false;
+    state.handshakeStep = null;
+    state.pendingOfferCode = '';
+    state.pendingAnswerCode = '';
     showStep('stepRole');
+    sessionBanner.style.display = 'none';
   }
 
-  // ==================== SESSION BANNER + TTL ====================
+  // ==================== SESSION BANNER ====================
+  let bannerInterval = null;
   function showSessionBanner() {
     sessionBanner.style.display = 'flex';
     updateBannerCountdown();
-    setInterval(updateBannerCountdown, 1000);
+    clearInterval(bannerInterval);
+    bannerInterval = setInterval(updateBannerCountdown, 1000);
   }
   function updateBannerCountdown() {
     const s = loadSession();
-    if (!s) { sessionBanner.style.display = 'none'; return; }
+    if (!s) { sessionBanner.style.display = 'none'; clearInterval(bannerInterval); return; }
     const remaining = Math.max(0, SESSION_TTL_MS - (Date.now() - s.savedAt));
     const mm = String(Math.floor(remaining / 60000)).padStart(2, '0');
     const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
     bannerCountdown.textContent = `${mm}:${ss}`;
     if (remaining <= 0) {
       sessionBanner.style.display = 'none';
+      clearInterval(bannerInterval);
       expireSession();
     }
   }
 
   function expireSession() {
     clearSession();
+    clearInterval(bannerInterval);
     clearInterval(resumeCountdownInterval);
-    // Reset UI
     disableChat();
     messagesEl.innerHTML = '';
     state.messageHistory = [];
     state.sharedKey = null;
     state.sharedKeyJwk = null;
     state.keySent = false;
+    state.handshakeStep = null;
     showConnectScreen();
     showStep('stepRole');
-    addSystemMessage('⏰ Session expired due to inactivity. Please reconnect.');
+    sessionBanner.style.display = 'none';
   }
 
-  // Periodic check: if we're in a session and it's been idle > TTL, expire
+  // Check every 15s if session expired
   setInterval(() => {
     const s = loadSession();
     if (!s) return;
-    const idle = Date.now() - s.savedAt;
-    if (idle > SESSION_TTL_MS) {
+    if (Date.now() - s.savedAt > SESSION_TTL_MS) {
       expireSession();
     }
-  }, 15000); // check every 15s
+  }, 15000);
+
+  // Activity tracking
+  ['click', 'keydown', 'touchstart', 'mousemove', 'scroll'].forEach(evt => {
+    document.addEventListener(evt, () => { touchSession(); }, { passive: true, capture: true });
+  });
 
   // ==================== EVENT BINDINGS ====================
   $('btnCreate').addEventListener('click', async () => {
@@ -1671,7 +1632,7 @@
     $('offerBox').value = 'Generating…';
     showStep('stepOffer');
     try { await startCreator(); }
-    catch(e) { console.error(e); alert('Failed to create room: ' + e.message); }
+    catch(e) { alert('Failed to create room: ' + e.message); }
   });
 
   $('btnJoin').addEventListener('click', async () => {
@@ -1688,9 +1649,15 @@
     });
   });
 
-  $('btnNextToAnswer').addEventListener('click', () => showStep('stepAnswer'));
+  $('btnNextToAnswer').addEventListener('click', () => {
+    state.handshakeStep = 'answer';
+    saveSession(true);
+    showStep('stepAnswer');
+  });
+
   $('btnConnect').addEventListener('click', acceptAnswer);
   $('btnAcceptOffer').addEventListener('click', acceptOffer);
+
   $('btnCopyReply').addEventListener('click', () => {
     const box = $('replyBox');
     box.select();
@@ -1717,14 +1684,10 @@
   btnAccept.addEventListener('click', acceptIncomingCall);
   btnDecline.addEventListener('click', declineIncomingCall);
 
-  // Resume buttons
   $('btnResumeSession').addEventListener('click', resumeSession);
   $('btnDiscardSession').addEventListener('click', discardSession);
 
-  // Save session on visibility change / unload
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) saveSession(true);
-  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveSession(true); });
   window.addEventListener('beforeunload', () => {
     if (state.call.active) endCall(true);
     saveSession(true);
@@ -1733,25 +1696,17 @@
   // ==================== INIT ====================
   async function init() {
     setupKeyboardHandling();
-    // Try restore
     const restored = await restoreSessionFromStorage();
     if (restored) {
-      const s = loadSession();
-      // Check if there was an active connection (there wasn't — RTCPeerConnection died on reload)
-      // Show the resume step
+      // Show the resume step (connect screen stays visible until user clicks Resume)
       showResumeScreen();
-      // update countdown every second
-      clearInterval(resumeCountdownInterval);
-      resumeCountdownInterval = setInterval(updateResumeCountdown, 1000);
-      // If there are messages, we can pre-render behind the connect screen, but keep stepResume visible
     } else {
       showStep('stepRole');
     }
-    // If a session exists but is valid, periodically check expiration
   }
 
   window.__state = state;
-  window.__storage = { loadSession, clearSession, saveSession };
+  window.__storage = { loadSession, clearSession, saveSession, touchSession };
   init();
 })();
 </script>
