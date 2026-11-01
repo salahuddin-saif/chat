@@ -6,6 +6,7 @@
 <title>SecureChat — E2E Encrypted P2P</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -86,7 +87,10 @@
   .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
   .btn-ghost { background: #1a2236; color: #b9c6e4; border: 1px solid #2b3852; }
   .btn-ghost:hover { background: #222d45; }
+  .btn-green { background: linear-gradient(135deg,#2ecc71,#27ae60); color: white; box-shadow: 0 10px 26px -8px #2ecc71a0; }
+  .btn-green:hover { transform: translateY(-1px); }
   .btn-sm { padding: 9px 14px; font-size: 0.8rem; border-radius: 10px; }
+  .divider { text-align: center; font-size: 0.72rem; color: #5b8cff; margin: 16px 0 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 0.78rem; color: #8693b1; margin-bottom: 6px; font-weight: 500; }
   .nav-actions { display: flex; gap: 10px; margin-top: 6px; }
@@ -428,12 +432,44 @@
           <label>Your display name</label>
           <input class="code-box" id="myNameInput" style="font-family:Inter,sans-serif;font-size:16px;padding:12px 14px;resize:none;height:auto" placeholder="e.g. Alex" maxlength="24" />
         </div>
+        <button class="btn btn-green" id="btnCreateLink" style="margin-bottom:14px">
+          <i class="fas fa-link"></i> Create & share a room link
+        </button>
+        <div class="divider">or use manual invite</div>
         <button class="btn btn-primary" id="btnCreate" style="margin-bottom:10px">
           <i class="fas fa-plus-circle"></i> Create a room
         </button>
         <button class="btn btn-ghost" id="btnJoin">
           <i class="fas fa-arrow-right-to-bracket"></i> Join with an invite
         </button>
+      </div>
+
+      <!-- Room link (creator) -->
+      <div class="step" id="stepRoomLink">
+        <div class="step-title">Room link ready</div>
+        <p class="help-text">Send this link to your friend. When they open it, you'll be connected automatically — no codes to exchange.</p>
+        <textarea class="code-box" id="roomLinkBox" rows="3" readonly style="font-size:0.75rem;word-break:break-all"></textarea>
+        <div class="nav-actions">
+          <button class="btn btn-ghost btn-sm" id="btnCopyRoomLink"><i class="fas fa-copy"></i> Copy link</button>
+        </div>
+        <div class="status-line" id="roomLinkStatus"></div>
+      </div>
+
+      <!-- Join room link (opened from shared URL) -->
+      <div class="step" id="stepJoinLink">
+        <div class="step-title">Join a room</div>
+        <p class="help-text">You've been invited to a secure room. Enter your name to join — connection is instant.</p>
+        <div class="field">
+          <label>Your display name</label>
+          <input class="code-box" id="joinLinkNameInput" style="font-family:Inter,sans-serif;font-size:16px;padding:12px 14px;resize:none;height:auto" placeholder="e.g. Alex" maxlength="24" />
+        </div>
+        <button class="btn btn-green" id="btnJoinLink">
+          <i class="fas fa-arrow-right-to-bracket"></i> Join room
+        </button>
+        <button class="btn btn-ghost" id="btnCancelJoin" style="margin-top:10px">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <div class="status-line" id="joinLinkStatus"></div>
       </div>
 
       <div class="step" id="stepOffer">
@@ -601,6 +637,8 @@
   let lastSaveTs = 0;
 
   function saveSession(force = false) {
+    // Do not persist link-mode sessions (they can't survive a reload anyway)
+    if (state.mode === 'link') return;
     const now = Date.now();
     if (!force && now - lastSaveTs < 400) return;
     lastSaveTs = now;
@@ -616,7 +654,6 @@
         peerPublicKeyJwk: state.peerPublicKeyJwk,
         keyExchanged: !!state.sharedKeyJwk,
         messages: state.messageHistory.slice(-500),
-        // Remember which handshake step we were on, so we can resume it
         handshakeStep: state.handshakeStep || null,
         pendingOfferCode: state.pendingOfferCode || '',
         pendingAnswerCode: state.pendingAnswerCode || '',
@@ -655,13 +692,17 @@
   const state = {
     myName: '', peerName: 'Friend',
     pc: null, dc: null, isCreator: false,
+    mode: 'manual',      // 'manual' | 'link'
+    peer: null,          // PeerJS Peer instance (link mode)
+    linkConn: null,      // PeerJS DataConnection (link mode)
+    roomId: null,        // PeerJS peer ID (link mode)
     myKeyPair: null, myKeyPairJwk: null,
     sharedKey: null, sharedKeyJwk: null,
     peerPublicKeyJwk: null,
     keySent: false,
     typingTimeout: null, isTypingSent: false, typingIndicatorEl: null,
     messageHistory: [],
-    handshakeStep: null,    // 'offer' | 'answer' | 'paste-offer' | 'reply' | null
+    handshakeStep: null,
     pendingOfferCode: '', pendingAnswerCode: '',
     call: {
       active: false, type: null, incoming: false,
@@ -715,7 +756,7 @@
     return crypto.subtle.importKey('spki', raw, { name: 'ECDH', namedCurve: 'P-256' }, true, []);
   }
   async function deriveSharedKey(priv, peerPub) {
-    return crypto.subtle.deriveKey({ name: 'ECDH', public: peerPub }, priv, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return crypto.subtle.deriveKey({ name: 'ECDH', public: peerPub }, priv, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
   }
   async function encryptText(plain) {
     if (!state.sharedKey) throw new Error('No shared key');
@@ -744,13 +785,35 @@
       publicKey: await crypto.subtle.importKey('jwk', jwk.publicKey, { name: 'ECDH', namedCurve: 'P-256' }, true, []),
     };
   }
-  // Make AES key extractable so we can save it
   async function exportSharedKeyJwk(key) {
     try { return await crypto.subtle.exportKey('jwk', key); }
     catch (e) { return null; }
   }
   async function importSharedKeyJwk(jwk) {
     return crypto.subtle.importKey('jwk', jwk, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  }
+
+  // ==================== TRANSPORT ABSTRACTION ====================
+  // In link mode → PeerJS DataConnection
+  // In manual mode → RTCDataChannel
+  function canSend() {
+    if (state.mode === 'link') {
+      return !!(state.linkConn && state.linkConn.open);
+    }
+    return !!(state.dc && state.dc.readyState === 'open');
+  }
+
+  function sendSignal(data) {
+    const jsonStr = JSON.stringify(data);
+    if (state.mode === 'link') {
+      if (state.linkConn && state.linkConn.open) {
+        try { state.linkConn.send(jsonStr); } catch (e) { console.warn('link send failed', e); }
+      }
+    } else {
+      if (state.dc && state.dc.readyState === 'open') {
+        try { state.dc.send(jsonStr); } catch (e) { console.warn('dc send failed', e); }
+      }
+    }
   }
 
   // ==================== UI HELPERS ====================
@@ -812,7 +875,7 @@
     }
   }
 
-  // ==================== TYPING ====================
+   // ==================== TYPING ====================
   function showTypingIndicator() {
     if (state.typingIndicatorEl) return;
     removeTypingIndicator();
@@ -831,30 +894,26 @@
     if (state.typingIndicatorEl) {
       state.typingIndicatorEl.remove();
       state.typingIndicatorEl = null;
-      updatePeerStatus(true, false);
+      updatePeerStatus(canSend(), false);
     }
   }
   function sendTypingSignal() {
-    if (!state.dc || state.dc.readyState !== 'open') return;
+    if (!canSend()) return;
     if (state.isTypingSent) clearTimeout(state.typingTimeout);
     else {
       state.isTypingSent = true;
-      try { state.dc.send(JSON.stringify({ type: 'typing', state: 'start' })); } catch(e){}
+      sendSignal({ type: 'typing', state: 'start' });
     }
     state.typingTimeout = setTimeout(() => {
       state.isTypingSent = false;
-      if (state.dc && state.dc.readyState === 'open') {
-        try { state.dc.send(JSON.stringify({ type: 'typing', state: 'stop' })); } catch(e){}
-      }
+      if (canSend()) sendSignal({ type: 'typing', state: 'stop' });
     }, 1500);
   }
   function sendTypingStop() {
     clearTimeout(state.typingTimeout);
     if (state.isTypingSent) {
       state.isTypingSent = false;
-      if (state.dc && state.dc.readyState === 'open') {
-        try { state.dc.send(JSON.stringify({ type: 'typing', state: 'stop' })); } catch(e){}
-      }
+      if (canSend()) sendSignal({ type: 'typing', state: 'stop' });
     }
   }
 
@@ -965,14 +1024,17 @@
     updatePeerStatus(false);
   }
 
-  // ==================== DATA CHANNEL ====================
+  // ==================== SHARED CONNECTION-OPEN HANDLER ====================
+  async function onConnectionOpen() {
+    sendSignal({ type: 'hello', name: state.myName || 'Anonymous' });
+    await sendKeyMessage();
+    enableChat(state.peerName);
+  }
+
+  // ==================== MANUAL MODE DATA CHANNEL ====================
   function setupDataChannel(dc) {
     state.dc = dc;
-    dc.onopen = async () => {
-      try { dc.send(JSON.stringify({ type: 'hello', name: state.myName || 'Anonymous' })); } catch(e){}
-      await sendKeyMessage();
-      enableChat(state.peerName);
-    };
+    dc.onopen = async () => { await onConnectionOpen(); };
     dc.onclose = () => {
       updatePeerStatus(false);
       disableChat();
@@ -1020,7 +1082,7 @@
         playDecryptAnimation(plain, () => {});
         break;
       case 'call-offer':
-        if (state.call.active) { state.dc.send(JSON.stringify({ type: 'call-busy' })); return; }
+        if (state.call.active) { sendSignal({ type: 'call-busy' }); return; }
         state.call.pendingOffer = msg;
         showIncomingCall(msg.callType, msg.name);
         break;
@@ -1052,10 +1114,10 @@
   }
 
   async function sendKeyMessage() {
-    if (!state.dc || state.dc.readyState !== 'open' || state.keySent) return;
+    if (!canSend() || state.keySent) return;
     try {
       const pub = await exportPublicKey(state.myKeyPair);
-      state.dc.send(JSON.stringify({ type: 'key', pub }));
+      sendSignal({ type: 'key', pub });
       state.keySent = true;
     } catch (e) { console.error('sendKeyMessage', e); }
   }
@@ -1069,8 +1131,9 @@
     { urls: 'stun:stun4.l.google.com:19302' },
   ]};
 
-  function createPC() {
-    if (state.pc) { try { state.pc.close(); } catch(e){} }
+  // Create or reuse the call PC. Works in BOTH modes.
+  function ensureCallPC() {
+    if (state.pc && state.pc.signalingState !== 'closed') return state.pc;
     const pc = new RTCPeerConnection(ICE);
     state.pc = pc;
     pc.oniceconnectionstatechange = () => {
@@ -1078,8 +1141,8 @@
       else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') updatePeerStatus(false);
     };
     pc.onicecandidate = (event) => {
-      if (event.candidate && state.dc && state.dc.readyState === 'open' && state.call.active) {
-        state.dc.send(JSON.stringify({ type: 'call-ice', candidate: event.candidate.toJSON() }));
+      if (event.candidate && state.call.active && canSend()) {
+        sendSignal({ type: 'call-ice', candidate: event.candidate.toJSON() });
       }
     };
     pc.ontrack = (event) => {
@@ -1087,6 +1150,13 @@
       remoteVideo.srcObject = event.streams[0];
       remotePlaceholder.style.display = 'none';
     };
+    return pc;
+  }
+
+  // Used only in MANUAL mode at the start of creator/joiner flow
+  function createPC() {
+    if (state.pc) { try { state.pc.close(); } catch(e){} state.pc = null; }
+    const pc = ensureCallPC();
     pc.ondatachannel = (e) => { setupDataChannel(e.channel); };
     return pc;
   }
@@ -1103,8 +1173,9 @@
     });
   }
 
-  // ==================== CREATOR / JOINER ====================
+  // ==================== MANUAL FLOW: CREATOR / JOINER ====================
   async function startCreator() {
+    state.mode = 'manual';
     state.isCreator = true;
     state.myName = $('myNameInput').value.trim() || 'Anonymous';
     state.myKeyPair = await generateKeyPair();
@@ -1120,7 +1191,7 @@
     const code = btoa(JSON.stringify(payload));
     $('offerBox').value = code;
     state.pendingOfferCode = code;
-    state.handshakeStep = 'answer'; // creator's next step is to paste answer
+    state.handshakeStep = 'answer';
     setStatus('offerStatus', '');
     showStep('stepOffer');
     saveSession(true);
@@ -1143,6 +1214,7 @@
   }
 
   async function startJoiner() {
+    state.mode = 'manual';
     state.isCreator = false;
     state.myName = $('myNameInput').value.trim() || 'Anonymous';
     state.myKeyPair = await generateKeyPair();
@@ -1179,15 +1251,179 @@
     }
   }
 
+  // ==================== LINK MODE (PeerJS) ====================
+  function generateRoomId() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    const arr = crypto.getRandomValues(new Uint8Array(10));
+    for (let i = 0; i < 10; i++) id += chars[arr[i] % chars.length];
+    return 'sc-' + id;
+  }
+
+  function buildRoomLink(roomId) {
+    return location.href.split('#')[0] + '#room=' + roomId;
+  }
+
+  function getRoomIdFromHash() {
+    const m = location.hash.match(/[#&]room=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  async function startLinkHost() {
+    if (typeof Peer === 'undefined') {
+      alert('Connection library failed to load. Please check your internet and refresh.');
+      return;
+    }
+    state.mode = 'link';
+    state.isCreator = true;
+    state.myName = $('myNameInput').value.trim() || 'Anonymous';
+    state.myKeyPair = await generateKeyPair();
+    state.myKeyPairJwk = await exportKeyPairJwk(state.myKeyPair);
+
+    const roomId = generateRoomId();
+    state.roomId = roomId;
+    const link = buildRoomLink(roomId);
+    state.roomLink = link;
+
+    $('roomLinkBox').value = link;
+    showStep('stepRoomLink');
+    setStatus('roomLinkStatus', '<div class="spinner"></div> Waiting for your friend to join…');
+
+    // Auto-copy for convenience
+    copyToClipboard(link).then(ok => {
+      if (ok) {
+        setStatus('roomLinkStatus', '<div class="spinner"></div> Waiting for your friend to join… <span style="color:#2ecc71;margin-left:6px">(link copied)</span>');
+      }
+    });
+
+    const peer = new Peer(roomId, { debug: 1 });
+    state.peer = peer;
+
+    peer.on('open', () => {
+      setStatus('roomLinkStatus', '<div class="spinner"></div> Waiting for your friend to join…');
+    });
+
+    peer.on('error', (err) => {
+      console.error('[PeerJS] host error', err);
+      if (err.type === 'unavailable-id') {
+        // Unlikely (we generated it), but retry with a fresh ID
+        setStatus('roomLinkStatus', '<span style="color:#f5a623">Room ID collision — retrying…</span>');
+        setTimeout(() => { try { peer.destroy(); } catch(e){} startLinkHost(); }, 500);
+      } else {
+        setStatus('roomLinkStatus', '<span style="color:#e74c3c">Connection error: ' + err.type + '</span>');
+      }
+    });
+
+    peer.on('connection', (conn) => {
+      if (state.linkConn) {
+        // Already paired — reject extras
+        try { conn.close(); } catch(e){}
+        return;
+      }
+      state.linkConn = conn;
+      setupPeerConnectionHandlers(conn);
+    });
+  }
+
+  async function joinLinkRoom() {
+    if (typeof Peer === 'undefined') {
+      alert('Connection library failed to load. Please check your internet and refresh.');
+      return;
+    }
+    const name = $('joinLinkNameInput').value.trim();
+    if (!name) { $('joinLinkNameInput').focus(); return; }
+    const roomId = state.roomId || getRoomIdFromHash();
+    if (!roomId) { setStatus('joinLinkStatus', '<span style="color:#e74c3c">No room ID in link.</span>'); return; }
+
+    state.mode = 'link';
+    state.isCreator = false;
+    state.myName = name;
+    state.roomId = roomId;
+    state.myKeyPair = await generateKeyPair();
+    state.myKeyPairJwk = await exportKeyPairJwk(state.myKeyPair);
+
+    $('btnJoinLink').disabled = true;
+    setStatus('joinLinkStatus', '<div class="spinner"></div> Connecting to room…');
+
+    const peer = new Peer({ debug: 1 });
+    state.peer = peer;
+
+    const timeout = setTimeout(() => {
+      if (!state.linkConn || !state.linkConn.open) {
+        setStatus('joinLinkStatus', '<span style="color:#e74c3c">Timed out. The room may have expired.</span>');
+        try { peer.destroy(); } catch(e){}
+        $('btnJoinLink').disabled = false;
+      }
+    }, 15000);
+
+    peer.on('open', () => {
+      setStatus('joinLinkStatus', '<div class="spinner"></div> Reaching your friend…');
+      const conn = peer.connect(roomId, { reliable: true });
+      state.linkConn = conn;
+      setupPeerConnectionHandlers(conn);
+      conn.on('open', () => clearTimeout(timeout));
+    });
+
+    peer.on('error', (err) => {
+      console.error('[PeerJS] join error', err);
+      clearTimeout(timeout);
+      $('btnJoinLink').disabled = false;
+      if (err.type === 'peer-unavailable') {
+        setStatus('joinLinkStatus', '<span style="color:#e74c3c">Room not found. It may have expired or your friend hasn\'t opened it yet.</span>');
+      } else {
+        setStatus('joinLinkStatus', '<span style="color:#e74c3c">Connection failed: ' + err.type + '</span>');
+      }
+    });
+  }
+
+  function setupPeerConnectionHandlers(conn) {
+    conn.on('open', async () => { await onConnectionOpen(); });
+    conn.on('data', async (data) => {
+      let msg;
+      if (typeof data === 'string') {
+        try { msg = JSON.parse(data); } catch(e) { return; }
+      } else {
+        msg = data;
+      }
+      try { await handleMessage(msg); }
+      catch (e) { console.error('Bad link message', e); }
+    });
+    conn.on('close', () => {
+      updatePeerStatus(false);
+      disableChat();
+      addSystemMessage('Disconnected. Refresh the page to rejoin.');
+      if (state.call.active) endCall(false);
+    });
+    conn.on('error', (e) => console.error('[Link] conn error', e));
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+    }
+    // Fallback
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Promise.resolve(ok);
+    } catch (e) { return Promise.resolve(false); }
+  }
+
   // ==================== SEND MESSAGE ====================
   async function sendChatMessage() {
     const text = msgInput.value.trim();
     if (!text) return;
-    if (!state.dc || state.dc.readyState !== 'open') { addSystemMessage('Not connected yet.'); return; }
+    if (!canSend()) { addSystemMessage('Not connected yet.'); return; }
     if (!state.sharedKey) { addSystemMessage('Encryption keys not ready yet. Please wait…'); return; }
     try {
       const body = await encryptText(text);
-      state.dc.send(JSON.stringify({ type: 'chat', body }));
+      sendSignal({ type: 'chat', body });
       addMessage(text, 'out');
       msgInput.value = '';
       msgInput.focus({ preventScroll: true });
@@ -1219,8 +1455,7 @@
 
   async function startCall(type) {
     if (state.call.active) return;
-    if (!state.dc || state.dc.readyState !== 'open') { addSystemMessage('Not connected.'); return; }
-    if (!state.pc) return;
+    if (!canSend()) { addSystemMessage('Not connected.'); return; }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       addSystemMessage('⚠️ Your browser does not support audio/video calls.'); return;
     }
@@ -1236,8 +1471,9 @@
     }
     const actualType = stream.getVideoTracks().length > 0 ? 'video' : 'audio';
     state.call.localStream = stream;
+    const pc = ensureCallPC();
     try {
-      stream.getTracks().forEach(track => state.pc.addTrack(track, stream));
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
       localVideo.srcObject = stream;
       if (actualType === 'video') localVideoWrap.classList.add('active');
       state.call.active = true;
@@ -1252,10 +1488,10 @@
       callOverlay.classList.add('active');
       btnMute.classList.remove('muted');
       btnCam.classList.toggle('cam-off', actualType === 'audio');
-      const offer = await state.pc.createOffer();
-      await state.pc.setLocalDescription(offer);
-      const local = await waitIce(state.pc, 3000);
-      state.dc.send(JSON.stringify({ type: 'call-offer', callType: actualType, sdp: { sdp: local.sdp, type: local.type }, name: state.myName }));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      const local = await waitIce(pc, 3000);
+      sendSignal({ type: 'call-offer', callType: actualType, sdp: { sdp: local.sdp, type: local.type }, name: state.myName });
       addSystemMessage(`📞 Calling ${state.peerName} (${actualType})…`);
     } catch (err) {
       addSystemMessage('⚠️ Could not start call: ' + err.message);
@@ -1279,7 +1515,7 @@
     state.call.pendingOffer = null;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       addSystemMessage('⚠️ Your browser does not support audio/video calls.');
-      state.dc.send(JSON.stringify({ type: 'call-end' })); return;
+      sendSignal({ type: 'call-end' }); return;
     }
     let stream;
     try { stream = await getMedia(type); }
@@ -1288,20 +1524,21 @@
       if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') msg = '⚠️ No microphone or camera found.';
       else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') msg = '⚠️ Permission denied.';
       addSystemMessage(msg);
-      state.dc.send(JSON.stringify({ type: 'call-end' }));
+      sendSignal({ type: 'call-end' });
       cleanupCall(); return;
     }
     const actualType = stream.getVideoTracks().length > 0 ? 'video' : 'audio';
     state.call.localStream = stream;
+    const pc = ensureCallPC();
     try {
-      stream.getTracks().forEach(track => state.pc.addTrack(track, stream));
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
       localVideo.srcObject = stream;
       if (actualType === 'video') localVideoWrap.classList.add('active');
-      await state.pc.setRemoteDescription(new RTCSessionDescription(offer.sdp));
-      const answer = await state.pc.createAnswer();
-      await state.pc.setLocalDescription(answer);
-      const local = await waitIce(state.pc, 3000);
-      state.dc.send(JSON.stringify({ type: 'call-answer', sdp: { sdp: local.sdp, type: local.type } }));
+      await pc.setRemoteDescription(new RTCSessionDescription(offer.sdp));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      const local = await waitIce(pc, 3000);
+      sendSignal({ type: 'call-answer', sdp: { sdp: local.sdp, type: local.type } });
       state.call.active = true;
       state.call.type = actualType;
       state.call.muted = false;
@@ -1318,7 +1555,7 @@
       addSystemMessage('📞 Call accepted.');
     } catch (err) {
       addSystemMessage('⚠️ Could not accept call: ' + err.message);
-      state.dc.send(JSON.stringify({ type: 'call-end' }));
+      sendSignal({ type: 'call-end' });
       cleanupCall();
     }
   }
@@ -1326,9 +1563,7 @@
   function declineIncomingCall() {
     incomingCall.classList.remove('active');
     state.call.pendingOffer = null;
-    if (state.dc && state.dc.readyState === 'open') {
-      state.dc.send(JSON.stringify({ type: 'call-decline' }));
-    }
+    sendSignal({ type: 'call-decline' });
     addSystemMessage('📞 Call declined.');
   }
 
@@ -1361,16 +1596,17 @@
         const s = await navigator.mediaDevices.getUserMedia({ video: true });
         const vt = s.getVideoTracks()[0];
         state.call.localStream.addTrack(vt);
-        if (state.pc) state.pc.addTrack(vt, state.call.localStream);
+        const pc = ensureCallPC();
+        pc.addTrack(vt, state.call.localStream);
         localVideo.srcObject = state.call.localStream;
         localVideoWrap.classList.add('active');
         state.call.camOff = false;
         btnCam.classList.remove('cam-off');
         btnCam.innerHTML = '<i class="fas fa-video"></i>';
-        const offer = await state.pc.createOffer();
-        await state.pc.setLocalDescription(offer);
-        const local = await waitIce(state.pc, 2000);
-        state.dc.send(JSON.stringify({ type: 'call-offer', callType: 'video', sdp: { sdp: local.sdp, type: local.type }, name: state.myName }));
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        const local = await waitIce(pc, 2000);
+        sendSignal({ type: 'call-offer', callType: 'video', sdp: { sdp: local.sdp, type: local.type }, name: state.myName });
       } catch (e) { addSystemMessage('⚠️ Could not enable camera: ' + e.message); }
       return;
     }
@@ -1383,9 +1619,7 @@
 
   function endCall(notifyPeer = true) {
     if (!state.call.active) return;
-    if (notifyPeer && state.dc && state.dc.readyState === 'open') {
-      state.dc.send(JSON.stringify({ type: 'call-end' }));
-    }
+    if (notifyPeer) sendSignal({ type: 'call-end' });
     if (state.call.localStream) {
       state.call.localStream.getTracks().forEach(t => t.stop());
       state.call.localStream = null;
@@ -1435,12 +1669,12 @@
   }
 
   // ==================== RESTORE SESSION ====================
-  // This is the corrected function. Returns true if a session was restored.
   async function restoreSessionFromStorage() {
     const s = loadSession();
     if (!s) return false;
 
     try {
+      state.mode = 'manual';
       state.myName = s.myName || '';
       state.peerName = s.peerName || 'Friend';
       state.isCreator = s.isCreator || false;
@@ -1460,7 +1694,6 @@
       }
       if (s.peerPublicKeyJwk) state.peerPublicKeyJwk = s.peerPublicKeyJwk;
 
-      // Render messages into chat DOM
       messagesEl.innerHTML = '';
       if (Array.isArray(s.messages) && s.messages.length > 0) {
         state.messageHistory = s.messages.slice();
@@ -1473,11 +1706,9 @@
         state.messageHistory = [];
       }
 
-      // Update header
       peerNameEl.textContent = state.peerName;
       peerAvatar.textContent = (state.peerName[0] || '?').toUpperCase();
       updatePeerStatus(false);
-
       return true;
     } catch (e) {
       console.warn('restoreSessionFromStorage failed', e);
@@ -1485,7 +1716,6 @@
     }
   }
 
-  // Show the resume card with countdown
   let resumeCountdownInterval = null;
   function showResumeScreen() {
     showStep('stepResume');
@@ -1516,25 +1746,18 @@
     }
   }
 
-  // CORRECTED: Actually resume the session into the chat UI
   function resumeSession() {
     if (!state.myKeyPair) { showStep('stepRole'); return; }
-    // Hide connect screen → user sees their restored chat history
     hideConnectScreen();
-    // Chat input is disabled because WebRTC is gone (needs new handshake)
     disableChat();
-    // Show resume banner with countdown
     showSessionBanner();
-    // If we were mid-handshake, jump back to that step
     if (state.handshakeStep === 'reply') {
-      // We were the joiner waiting for creator. Restore reply box.
       $('replyBox').value = state.pendingAnswerCode || '';
       showConnectScreen();
       showStep('stepReply');
       setStatus('replyStatus', '<div class="spinner"></div> Waiting for your friend to connect…');
       addSystemMessage('Session restored — your reply code is ready. Send it to your friend.');
     } else if (state.handshakeStep === 'answer') {
-      // We were the creator about to paste answer. Restore offer box.
       $('offerBox').value = state.pendingOfferCode || '';
       showConnectScreen();
       showStep('stepOffer');
@@ -1544,13 +1767,8 @@
       showStep('stepPasteOffer');
       addSystemMessage('Session restored — paste your friend\'s invite to continue.');
     } else {
-      // Session restored with messages but no pending handshake.
-      // Show history + prompt to reconnect.
       addSystemMessage('Session restored. Re-connect to continue chatting.');
-      setTimeout(() => {
-        showConnectScreen();
-        showStep('stepRole');
-      }, 1200);
+      setTimeout(() => { showConnectScreen(); showStep('stepRole'); }, 1200);
     }
     saveSession(true);
   }
@@ -1611,16 +1829,12 @@
     sessionBanner.style.display = 'none';
   }
 
-  // Check every 15s if session expired
   setInterval(() => {
     const s = loadSession();
     if (!s) return;
-    if (Date.now() - s.savedAt > SESSION_TTL_MS) {
-      expireSession();
-    }
+    if (Date.now() - s.savedAt > SESSION_TTL_MS) expireSession();
   }, 15000);
 
-  // Activity tracking
   ['click', 'keydown', 'touchstart', 'mousemove', 'scroll'].forEach(evt => {
     document.addEventListener(evt, () => { touchSession(); }, { passive: true, capture: true });
   });
@@ -1638,6 +1852,42 @@
   $('btnJoin').addEventListener('click', async () => {
     if (!$('myNameInput').value.trim()) { $('myNameInput').focus(); return; }
     await startJoiner();
+  });
+
+  // NEW: Create room link
+  $('btnCreateLink').addEventListener('click', async () => {
+    if (!$('myNameInput').value.trim()) { $('myNameInput').focus(); return; }
+    try { await startLinkHost(); }
+    catch (e) { alert('Failed to create room link: ' + e.message); }
+  });
+
+  // NEW: Copy room link
+  $('btnCopyRoomLink').addEventListener('click', async () => {
+    const ok = await copyToClipboard($('roomLinkBox').value);
+    if (ok) {
+      setStatus('roomLinkStatus', '<span style="color:#2ecc71">✓ Link copied — send it to your friend</span>');
+      setTimeout(() => {
+        if (state.linkConn && state.linkConn.open) return;
+        setStatus('roomLinkStatus', '<div class="spinner"></div> Waiting for your friend to join…');
+      }, 2500);
+    } else {
+      setStatus('roomLinkStatus', '<span style="color:#f5a623">Copy failed — select and copy manually</span>');
+    }
+  });
+
+  // NEW: Join from shared link
+  $('btnJoinLink').addEventListener('click', async () => {
+    await joinLinkRoom();
+  });
+
+  // NEW: Cancel join
+  $('btnCancelJoin').addEventListener('click', () => {
+    if (state.peer) { try { state.peer.destroy(); } catch(e){} state.peer = null; }
+    state.linkConn = null;
+    state.roomId = null;
+    // Strip hash so a refresh doesn't re-trigger join screen
+    history.replaceState(null, '', location.pathname + location.search);
+    showStep('stepRole');
   });
 
   $('btnCopyOffer').addEventListener('click', () => {
@@ -1696,12 +1946,33 @@
   // ==================== INIT ====================
   async function init() {
     setupKeyboardHandling();
+
+    // NEW: If the URL contains #room=xyz → this user was invited via a shared link
+    const hashRoomId = getRoomIdFromHash();
+    if (hashRoomId) {
+      state.mode = 'link';
+      state.roomId = hashRoomId;
+      // Pre-fill any previously entered name (from last manual session) if any
+      const s = loadSession();
+      if (s && s.myName) $('joinLinkNameInput').value = s.myName;
+      // Hide resume card if it was going to show
+      sessionBanner.style.display = 'none';
+      showStep('stepJoinLink');
+      return;
+    }
+
     const restored = await restoreSessionFromStorage();
-    if (restored) {
-      // Show the resume step (connect screen stays visible until user clicks Resume)
-      showResumeScreen();
-    } else {
-      showStep('stepRole');
+    if (restored) showResumeScreen();
+    else showStep('stepRole');
+
+    // Warn if PeerJS failed to load — user can still use manual mode
+    if (typeof Peer === 'undefined') {
+      const linkBtn = $('btnCreateLink');
+      if (linkBtn) {
+        linkBtn.disabled = true;
+        linkBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Link mode unavailable (offline?)';
+        linkBtn.style.opacity = '0.5';
+      }
     }
   }
 
